@@ -217,6 +217,9 @@ p { margin: 0; }
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .campo { display: grid; gap: 4px; min-width: 0; }
 .campo-largo { grid-column: 1 / -1; }
+.marcas { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.marca { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500; }
+.marca input { width: 17px; height: 17px; accent-color: var(--accent); }
 /* caixa composta: vários controles com aparência de um só campo */
 .combo {
   display: inline-flex; align-items: stretch; max-width: 100%; width: fit-content;

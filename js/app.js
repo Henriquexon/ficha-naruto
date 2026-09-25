@@ -101,12 +101,14 @@
       }
       if (j.tipo === undefined) j.tipo = TIPO_CAT[j.cat] || '';
       estruturarDano(j);
+      marcarJutsu(j);
       j.aprim = clamp(num(j.aprim), 0, 6);
       return j;
     });
     out.itens = out.itens.map(estruturarItem);
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
+    out.pa = clamp(num(out.pa, 3), 1, 5);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
     return out;
   }
@@ -194,10 +196,10 @@
     return j;
   }
   const fmtDano = (j) => (j.danoTipo === 'd' ? `${j.danoQtd || ''}d${j.danoFaces || ''}` : '—');
-  const jutsuDoCatalogo = (j) => estruturarDano(estruturarJutsu({
+  const jutsuDoCatalogo = (j) => marcarJutsu(estruturarDano(estruturarJutsu({
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
-  }));
+  })));
   // Texto de requerimento do livro -> opções da caixa (elementos, habilidades inatas, clãs, portões).
   // exato = tudo o que estava escrito virou opção; se não, o texto original vai para as anotações.
   function reqsDe(texto) {
@@ -237,7 +239,28 @@
   const filtrosHTML = (idO, idE, o, e) =>
     `<select id="${idO}" aria-label="Filtrar por origem" style="width:auto">${opt('', 'Todas as origens', o)}${opt('cla', 'Técnicas de clã', o)}${opt('inata', 'Técnicas de habilidade inata', o)}</select>
      <select id="${idE}" aria-label="Filtrar por elemento" style="width:auto">${opt('', 'Todos os elementos', e)}${R.ELEMENTOS.map((x) => opt(x.id, x.nome, e)).join('')}</select>`;
-  const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}`);
+  const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}${j.porTurno ? '/turno' : ''}`);
+  // Marcações que o livro põe no começo do Efeito ("Defesa.", "Defesa Extra.", "Concentração.", "Estilo de Luta.")
+  const MARCAS = [['defesa', 'Defesa'], ['defesaExtra', 'Defesa Extra'], ['concentracao', 'Concentração'], ['estilo', 'Estilo de Luta']];
+  function marcarJutsu(j) {
+    if (j.defesa !== undefined) return j;
+    const inicio = String(j.efeito || '').split('.').slice(0, 3).map((x) => x.trim().toLowerCase());
+    j.defesa = inicio.includes('defesa');
+    j.defesaExtra = inicio.includes('defesa extra');
+    j.concentracao = inicio.includes('concentração');
+    j.estilo = inicio.includes('estilo de luta');
+    j.porTurno = j.estilo || /turno/i.test(String(j.custo || '')) || /Custo [^·\n]*turno/i.test(String(j.notas || ''));
+    return j;
+  }
+  // Custo por turno de chakra pelo rank (tabela de Chakra Mínimo/Máximo por Turno, Treinos)
+  const CUSTO_TURNO = { D: [1, 2], C: [3, 5], B: [7, 10], A: [13, 22] };
+  function ajustarCustoTurno(j) {
+    if (!j.estilo) return;
+    j.porTurno = true;
+    if (j.custoTipo === '-' || !j.custoTipo) j.custoTipo = 'chakra';
+    const faixa = CUSTO_TURNO[j.rank];
+    if (j.custoTipo === 'chakra' && faixa) j.custoQtd = clamp(num(j.custoQtd), faixa[0], faixa[1]);
+  }
   function estruturarItem(it) {
     if (it.v === 2) return it;
     const { alcance, exato } = alcanceDe(it.range);
@@ -392,7 +415,7 @@
     D.pontosPericia = Object.entries(D.periciaCont).reduce((s, [id, c]) => (id === 'jiongu' ? s : s + (c >= 2 ? 4 : 0) + (c >= 4 ? 4 : 0)), 0);
     D.pontosPericiaGastos = F.talentosPericia.reduce((s, t) => s + num(t.pts), 0);
     D.jutsuExtra = A.car > 0 ? Math.ceil(A.car / 2) : 0;
-    D.paMax = 3 + (A.int >= 3 ? 1 + Math.floor((A.int - 3) / 2) : 0);
+    D.paMax = Math.min(5, 3 + (A.int >= 3 ? 1 + Math.floor((A.int - 3) / 2) : 0));
     if (temTalento('Um Passo à Frente') && A.int >= 1) D.paMax = Math.max(D.paMax, 4);
     // Soco: nível escolhido + níveis da perícia de Taijutsu; sem a 2ª perícia o máximo é o nível 4 (2d6)
     const socoMax = (D.periciaCont.taijutsu || 0) >= 2 ? 12 : 4;
@@ -479,7 +502,7 @@
       ${o.danoTipo === 'd' ? `<input data-k="${k('danoFaces')}" class="so-digitos" inputmode="numeric" value="${esc(o.danoFaces)}" placeholder="0" aria-label="Faces do dado">` : ''}
     </div></div>`;
   const tecnicaDN = (k, val) => {
-    const nomes = [...new Set(F.jutsus.map((j) => j.n).filter(Boolean))];
+    const nomes = [...new Set(F.jutsus.filter((j) => j.defesa || j.defesaExtra).map((j) => j.n).filter(Boolean))];
     return `<select data-k="${k}">${opt('', '—', nomes.includes(val) ? val : '')}${nomes.map((n) => opt(n, n, val)).join('')}</select>`;
   };
   const campo = (rot, html) => `<label class="campo"><span>${rot}</span>${html}</label>`;
@@ -572,7 +595,7 @@
       <div class="painel-topo"><h2>Combate</h2></div>
       <div class="stats">
         ${stat('Deslocamento', `<span data-d="desl">${D.desl}</span> m`)}
-        ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="12" class="mini"')}`)}
+        ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="5" class="mini"')}`)}
         ${stat('Regen. de chakra', `<span data-d="regen">${D.regen}</span>`)}
         ${stat('Percepção passiva', `<span data-d="percepcao">${D.percepcao}</span>`)}
         <div class="stat"><span class="rotulo">Soco</span><span class="valor">${D.soco[1]} <small>Nv ${D.socoNv}</small></span><select class="stat-sel" data-k="soco" data-r aria-label="Nível base do soco">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nível base ${i + 1}`, F.soco)).join('')}</select></div>
@@ -690,7 +713,7 @@
     if (!j.id) j.id = uid();
     return `<details class="item" data-id="${esc(j.id)}">
       <summary>
-        <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
+        <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${MARCAS.filter(([m]) => j[m]).map(([, t]) => `<span class="tag">${t}</span>`).join('')}${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
         <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(fmtDano(j))}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
       </summary>
       <div class="item-corpo">
@@ -699,8 +722,9 @@
           ${campo('Rank', selecao(k('rank'), RANKS_JUTSU, j.rank))}
           ${campo('Tipo', selecao(k('tipo'), TIPOS_JUTSU, j.tipo))}
           <div class="campo"><span>Custo</span><div class="linha" style="gap:6px;flex-wrap:nowrap">
-            ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `min="0" class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
+            ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `${j.estilo && j.custoTipo === 'chakra' && CUSTO_TURNO[j.rank] ? `min="${CUSTO_TURNO[j.rank][0]}" max="${CUSTO_TURNO[j.rank][1]}" title="Rank ${j.rank}: ${CUSTO_TURNO[j.rank][0]} a ${CUSTO_TURNO[j.rank][1]} de chakra por turno"` : 'min="0"'} class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
             <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
+            ${j.porTurno && j.custoTipo !== '-' ? '<span class="sub">/turno</span>' : ''}
           </div></div>
           <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
           ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
@@ -708,6 +732,7 @@
           ${danoCampo(k, j)}
           ${campo('Aprendizado', selecao(k('apr'), APRENDIZADOS, j.apr))}
           ${caixaReqs(j, i)}
+          <div class="campo-largo marcas">${MARCAS.map(([m, t]) => `<label class="marca"><input type="checkbox" data-k="${k(m)}" data-r ${j[m] ? 'checked' : ''}> ${t}</label>`).join('')}</div>
           ${j.rank === 'S' ? '' : `<div class="campo-linha"><label class="linha" style="gap:10px"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="6" class="mini" data-r')}</label>${num(j.aprim) >= 6 && j.rank ? `<button class="btn peq primario" data-acao="upar" data-i="${i}">Upar</button>` : ''}</div>`}
         </div>
         ${campo('Efeito', area(k('efeito'), j.efeito, 'rows="4"'))}
@@ -1265,7 +1290,7 @@
       if (aba === 'jutsus') render();
     },
     novaTecnica() {
-      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, tipo: '', custoTipo: 'chakra', custoQtd: 0, efeito: '', danoTipo: '-', danoQtd: '', danoFaces: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
+      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, tipo: '', custoTipo: 'chakra', custoQtd: 0, porTurno: false, defesa: false, defesaExtra: false, concentracao: false, estilo: false, efeito: '', danoTipo: '-', danoQtd: '', danoFaces: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
       ui.jq = ''; ui.jrank = '';
       render();
       const d = $$('#listaJutsus details'); const alvo = d.find((x) => x.querySelector('.item-nome').textContent === 'Nova técnica');
@@ -1284,6 +1309,7 @@
       const idx = RANKS_JUTSU.indexOf(j.rank);
       if (idx < 0 || idx >= RANKS_JUTSU.length - 1) return;
       j.rank = RANKS_JUTSU[idx + 1]; j.aprim = 0;
+      ajustarCustoTurno(j);
       toast(`${esc(j.n)} subiu para o rank ${j.rank}.`);
       return true;
     },
@@ -1354,6 +1380,7 @@
     else v = el.value;
     if (k === 'nivel') v = clamp(num(v, 1), 1, 20);
     if (/^jutsus\.\d+\.aprim$/.test(k)) { v = clamp(num(v), 0, 6); el.value = v; }
+    if (k === 'pa' && el.value !== '') { v = clamp(num(v, 3), 1, 5); el.value = v; }
     setPath(F, k, v);
     salvar();
     return el.hasAttribute('data-r');
@@ -1414,6 +1441,13 @@
     }
     if (!el.dataset || !el.dataset.k) return;
     const re = aplicarCampo(el);
+    const mj = el.dataset.k.match(/^jutsus\.(\d+)\.(estilo|rank|custoTipo|custoQtd)$/);
+    if (mj) {
+      const j = F.jutsus[+mj[1]];
+      if (mj[2] === 'estilo' && !j.estilo) j.porTurno = /turno/i.test(String(j.custo || ''));
+      ajustarCustoTurno(j); salvar();
+      if (mj[2] === 'custoQtd') el.value = j.custoQtd;
+    }
     if (re) render(); else atualizarDerivados();
   });
 

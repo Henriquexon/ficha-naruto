@@ -215,6 +215,8 @@ p { margin: 0; }
 
 /* Campos */
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* caixas alinhadas pela base mesmo quando um título quebra em duas linhas */
+.campos.campos-base { align-items: end; }
 .campo { display: grid; gap: 4px; min-width: 0; }
 .campo-largo { grid-column: 1 / -1; }
 .marcas { display: flex; flex-wrap: wrap; gap: 8px 18px; }

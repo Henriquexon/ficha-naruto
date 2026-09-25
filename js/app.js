@@ -54,7 +54,7 @@
       bonus: { vida: 0, chakra: 0, regen: 0, desl: 0, carga: 0, arremesso: 0, dn: 0 },
       pvAtual: null, chakraAtual: null, sobrevida: 0, sobrechakra: 0, protagonismo: null,
       morte: { v: 0, d: 0 }, condicoes: {}, pa: 3, soco: 1,
-      dn: { nin: '', gen: '', contra: '', contraAttr: 'tai' },
+      dn: { nin: '', nin2: '', nin3: '', gen: '', gen2: '', contra: '', contraAttr: 'tai' },
       esp: {}, pericias: ['', '', '', ''], periciasEsc: [{}, {}, {}, {}], talentosPericia: [], talentos: [],
       upgrades: { 5: '', 10: '', 15: '', 20: '' },
       jutsus: [], itens: [], ryo: 0, companheiros: [], marionetes: [],
@@ -422,6 +422,8 @@
     D.socoNv = clamp(clamp(num(F.soco, 1), 1, 12) + PB.soco, 1, socoMax);
     D.soco = R.SOCO[D.socoNv];
     const kug = D.periciaCont.kugutsu || 0;
+    D.vagasDnNin = 1 + (D.periciaCont.ninjutsu || D.periciaCont.kugutsu || D.periciaCont.medicina ? 1 : 0) + (temTalento('Ninja Precavido') ? 1 : 0);
+    D.vagasDnGen = 1 + (D.periciaCont.genjutsu ? 1 : 0);
     D.marionetesMax = 1 + (kug >= 2 ? 1 : 0) + (kug >= 3 ? 1 : 0) + (kug >= 4 ? 1 : 0);
     D.elementosFixos = [].concat(cla.elementos || [], ...F.inatas.map((id) => (R.INATAS.find((h) => h.id === id) || {}).elementos || []));
     return D;
@@ -501,10 +503,23 @@
       <select data-k="${k('danoTipo')}" data-r aria-label="Tipo de dano">${opt('-', '-', o.danoTipo)}${opt('d', 'd', o.danoTipo)}</select>
       ${o.danoTipo === 'd' ? `<input data-k="${k('danoFaces')}" class="so-digitos" inputmode="numeric" value="${esc(o.danoFaces)}" placeholder="0" aria-label="Faces do dado">` : ''}
     </div></div>`;
-  const tecnicaDN = (k, val) => {
-    const nomes = [...new Set(F.jutsus.filter((j) => j.defesa || j.defesaExtra).map((j) => j.n).filter(Boolean))];
+  // Técnicas que podem ir em cada DN:
+  //  Ninjutsu: Defesa/Defesa Extra do tipo Ninjutsu · Genjutsu: Defesa/Defesa Extra da seção de Genjutsus
+  //  contra-ataque: técnicas sem Defesa nem Defesa Extra
+  const eDefesa = (j) => j.defesa || j.defesaExtra;
+  const FILTRO_DN = {
+    nin: (j) => eDefesa(j) && j.tipo === 'Ninjutsu',
+    gen: (j) => eDefesa(j) && j.cat === 'GENJUTSUS',
+    contra: (j) => !eDefesa(j),
+  };
+  const tecnicaDN = (k, val, filtro) => {
+    const nomes = [...new Set(F.jutsus.filter(FILTRO_DN[filtro]).map((j) => j.n).filter(Boolean))];
     return `<select data-k="${k}">${opt('', '—', nomes.includes(val) ? val : '')}${nomes.map((n) => opt(n, n, val)).join('')}</select>`;
   };
+  const vagasDN = (base, rot, qtd, filtro) => Array.from({ length: qtd }, (_, i) => {
+    const k = i ? `${base}${i + 1}` : base;
+    return campo(`${rot}${qtd > 1 ? ` ${i + 1}` : ''}`, tecnicaDN(`dn.${k}`, F.dn[k], filtro));
+  }).join('');
   const campo = (rot, html) => `<label class="campo"><span>${rot}</span>${html}</label>`;
   const stat = (rot, valorHtml, det = '') => `<div class="stat"><span class="rotulo">${rot}</span><span class="valor">${valorHtml}</span>${det ? `<span class="det">${det}</span>` : ''}</div>`;
 
@@ -582,10 +597,10 @@
         ${dnCard('int', 'Inteligência', '= percepção passiva')}
         ${dnCard('contra', 'Contra-ataque', `4 + <select data-k="dn.contraAttr" data-r aria-label="Atributo do contra-ataque" style="width:auto;padding:1px 4px">${R.ATRIBUTOS.map((a) => opt(a.id, attrCurto[a.id], F.dn.contraAttr)).join('')}</select>`)}
       </div>
-      <div class="campos">
-        ${campo('Técnica na DN de Ninjutsu', tecnicaDN('dn.nin', F.dn.nin))}
-        ${campo('Técnica na DN de Genjutsu', tecnicaDN('dn.gen', F.dn.gen))}
-        ${campo('Técnica de contra-ataque', tecnicaDN('dn.contra', F.dn.contra))}
+      <div class="campos campos-base">
+        ${vagasDN('nin', 'Técnica na DN de Ninjutsu', D.vagasDnNin, 'nin')}
+        ${vagasDN('gen', 'Técnica na DN de Genjutsu', D.vagasDnGen, 'gen')}
+        ${campo('Técnica de contra-ataque', tecnicaDN('dn.contra', F.dn.contra, 'contra'))}
         ${campo('Bônus em todas as DN', numInp('bonus.dn', F.bonus.dn))}
       </div>
     </section>`;

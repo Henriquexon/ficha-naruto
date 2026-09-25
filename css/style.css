@@ -13,6 +13,12 @@
   --seal: #B8281E;
   --seal-soft: #F5D8D0;
   --selo: #B5302A;
+  --rk-e: #5F6673; --rk-e-bg: #E6E7EB;
+  --rk-d: #2B7A2F; --rk-d-bg: #D9EED4;
+  --rk-c: #7E6300; --rk-c-bg: #FFEFA6; --rk-c-borda: #D2A800;
+  --rk-b: #B54A08; --rk-b-bg: #FCDCC2;
+  --rk-a: #B8231A; --rk-a-bg: #F8D3CE;
+  --rk-s: #4A3500; --rk-s-bg: linear-gradient(135deg, #FBE9A0, #D9A92C); --rk-s-borda: #B0851A;
   --selo-soft: #F8E4E2;
   --f-selo: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
   --vida: #3E8E37;
@@ -53,6 +59,12 @@
     --seal-soft: #3F1D1C;
     --selo: #E4604F;
     --selo-soft: #3A1F1D;
+    --rk-e: #B0B5C0; --rk-e-bg: #2B2E36;
+    --rk-d: #74D16E; --rk-d-bg: #1B3318;
+    --rk-c: #F5D146; --rk-c-bg: #3A3210; --rk-c-borda: #C9A51E;
+    --rk-b: #FF9D55; --rk-b-bg: #432716;
+    --rk-a: #FF6F62; --rk-a-bg: #45201C;
+    --rk-s: #231900; --rk-s-bg: linear-gradient(135deg, #F4D774, #C5982A); --rk-s-borda: #E0B84A;
     --vida: #5DBB54;
     --vida-soft: #1C3319;
     --chakra: #5E9BFF;
@@ -85,6 +97,12 @@
   --seal-soft: #3F1D1C;
   --selo: #E4604F;
   --selo-soft: #3A1F1D;
+  --rk-e: #B0B5C0; --rk-e-bg: #2B2E36;
+  --rk-d: #74D16E; --rk-d-bg: #1B3318;
+  --rk-c: #F5D146; --rk-c-bg: #3A3210; --rk-c-borda: #C9A51E;
+  --rk-b: #FF9D55; --rk-b-bg: #432716;
+  --rk-a: #FF6F62; --rk-a-bg: #45201C;
+  --rk-s: #231900; --rk-s-bg: linear-gradient(135deg, #F4D774, #C5982A); --rk-s-borda: #E0B84A;
   --vida: #5DBB54;
   --vida-soft: #1C3319;
   --chakra: #5E9BFF;
@@ -291,6 +309,13 @@ input.micro { width: 52px; padding: 4px 4px; text-align: center; }
   border: 1.5px solid var(--seal); color: var(--seal); font-family: var(--f-display); font-weight: 400; font-size: .95rem;
   background: var(--seal-soft); flex: none;
 }
+/* cor por rank de jutsu: E cinza, D verde, C amarelo, B laranja, A vermelho, S dourado */
+.rank.rank-E { color: var(--rk-e); border-color: var(--rk-e); background: var(--rk-e-bg); }
+.rank.rank-D { color: var(--rk-d); border-color: var(--rk-d); background: var(--rk-d-bg); }
+.rank.rank-C { color: var(--rk-c); border-color: var(--rk-c-borda); background: var(--rk-c-bg); }
+.rank.rank-B { color: var(--rk-b); border-color: var(--rk-b); background: var(--rk-b-bg); }
+.rank.rank-A { color: var(--rk-a); border-color: var(--rk-a); background: var(--rk-a-bg); }
+.rank.rank-S { color: var(--rk-s); border-color: var(--rk-s-borda); background: var(--rk-s-bg); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
 
 /* Atributos */
 .tabela-wrap { overflow-x: auto; }

@@ -741,7 +741,7 @@
     if (!j.id) j.id = uid();
     return `<details class="item" data-id="${esc(j.id)}">
       <summary>
-        <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${MARCAS.filter(([m]) => j[m]).map(([, t]) => `<span class="tag">${t}</span>`).join('')}${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
+        <span class="item-linha"><span class="rank rank-${rankLetra(j.rank)}">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${MARCAS.filter(([m]) => j[m]).map(([, t]) => `<span class="tag">${t}</span>`).join('')}${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
         <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(fmtDano(j))}</b></span></span>
       </summary>
       <div class="item-corpo">
@@ -820,7 +820,7 @@
     el.innerHTML = `<p class="sub">${achados.length} técnica(s) encontradas.</p>` + achados.slice(0, c.lim).map(([j, idx]) => `
       <details class="item">
         <summary>
-          <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n)}</span>
+          <span class="item-linha"><span class="rank rank-${rankLetra(j.rank)}">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n)}</span>
             ${tem.has(j.n) ? '<span class="tag">Na ficha</span>' : `<button class="btn peq primario" data-acao="addJutsu" data-idx="${idx}">Adicionar</button>`}</span>
           <span class="item-meta"><span>${esc(j.grp || j.cat)}</span><span>Custo <b>${esc(j.custo) || '—'}</b></span><span>PA <b>${esc(j.pa) || '—'}</b></span><span>Range <b>${esc(j.range) || '—'}</b></span><span>Aprendizado <b>${esc(j.apr) || '—'}</b></span></span>
         </summary>

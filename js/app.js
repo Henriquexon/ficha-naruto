@@ -8,7 +8,11 @@
   const CAT_M = window.CATALOGO_MARIONETES || [];
   const CAT_COMP = window.CATALOGO_COMPONENTES || [];
   const STORE = 'ficha-naruto:v1';
-  const RANK_ORD = { D: 0, C: 1, B: 2, A: 3, S: 4 };
+  const RANK_ORD = { E: -1, D: 0, C: 1, B: 2, A: 3, S: 4 };
+  const RANKS_JUTSU = ['E', 'D', 'C', 'B', 'A', 'S'];
+  const ALCANCES = ['-', 'Corpo-a-Corpo', 'Curto', 'Médio', 'Longo'];
+  const AREAS = ['-', 'Pequeno', 'Grande'];
+  const APRENDIZADOS = ['C', 'I', 'T', 'D'];
   const NIVEIS_PERICIA = [4, 9, 14, 19];
   const NIVEIS_UPGRADE = [5, 10, 15, 20];
   const NIVEIS_COMPRA = [1, 2, 4, 7, 9, 12, 14, 17, 19, 20];
@@ -23,7 +27,7 @@
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
   const attrNome = (id) => (R.ATRIBUTOS.find((a) => a.id === id) || {}).nome || id;
   const attrCurto = { car: 'Car', cons: 'Cons', des: 'Des', gen: 'Gen', int: 'Int', nin: 'Nin', tai: 'Tai' };
-  const rankLetra = (s) => { const m = String(s || '').trim().match(/^[DCBAS]/i); return m ? m[0].toUpperCase() : '—'; };
+  const rankLetra = (s) => { const m = String(s || '').trim().match(/^[EDCBAS]\b/i); return m ? m[0].toUpperCase() : '—'; };
 
   function getPath(obj, path) {
     return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -85,6 +89,7 @@
       out.bonus.chakra = Math.max(0, num(out.bonus.chakra) - 10);
       out.bonus.regen = Math.max(0, num(out.bonus.regen) - 5);
     }
+    out.jutsus = out.jutsus.map(estruturarJutsu);
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
@@ -119,10 +124,38 @@
     return f;
   }
 
-  const jutsuDoCatalogo = (j) => ({
+  // Converte os campos de texto do livro para as caixas da ficha. O que não couber
+  // exatamente nas opções fica registrado em "Anotações" como "No livro: …".
+  function estruturarJutsu(j) {
+    if (j.v === 2) return j;
+    const livro = [];
+    const txt = (v) => String(v == null ? '' : v).trim();
+    const rk = txt(j.rank); const letra = rankLetra(rk);
+    if (rk && rk !== letra) livro.push(`Rank ${rk}`);
+    const c = txt(j.custo); const nC = c.match(/\d+/);
+    let tipo = /vida|\bpv\b/i.test(c) && !/chakra/i.test(c) ? 'vida' : /chakra/i.test(c) ? 'chakra' : (nC ? 'chakra' : '-');
+    if (!c || /^-+$/.test(c)) tipo = '-';
+    if (c && !/^-+$/.test(c) && !/^\d+\s*(de\s+)?(chakra|vida)$/i.test(c)) livro.push(`Custo ${c}`);
+    const r = txt(j.range).toLowerCase();
+    const alcance = /corpo/.test(r) ? 'Corpo-a-Corpo' : /curt/.test(r) ? 'Curto' : /m[eé]di/.test(r) ? 'Médio' : /long/.test(r) ? 'Longo' : '-';
+    const area = /pequen/.test(r) ? 'Pequeno' : /grande/.test(r) ? 'Grande' : '-';
+    if (r && r !== '-' && !/^(corpo-a-corpo|curto|m[eé]dio|longo)?(;?\s*[aá]rea\s+(pequena|grande))?$/i.test(r)) livro.push(`Range ${txt(j.range)}`);
+    const p = txt(j.pa); const nP = p.match(/\d+/);
+    if (p && p !== '-' && !/^\d+\s*PA$/i.test(p)) livro.push(`Custo de Ações ${p}`);
+    const a = txt(j.apr); const ap = (a.match(/^[CITD]\b/i) || [''])[0].toUpperCase();
+    if (a && a !== '-' && a.toUpperCase() !== ap) livro.push(`Aprendizado ${a.replace(/\s+/g, ' ')}`);
+    const nota = livro.length ? `No livro: ${livro.join(' · ')}` : '';
+    return Object.assign(j, {
+      v: 2, rank: letra === '—' ? '' : letra, custoTipo: tipo, custoQtd: tipo === '-' ? 0 : (nC ? Number(nC[0]) : 0),
+      paQtd: nP ? Number(nP[0]) : 0, range: alcance, area, apr: ap,
+      notas: [nota, txt(j.notas)].filter(Boolean).join('\n'),
+    });
+  }
+  const jutsuDoCatalogo = (j) => estruturarJutsu({
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
   });
+  const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}`);
   const itemDoCatalogo = (i, qtd = 1) => ({
     id: uid(), n: i.n, g: i.g, qtd, peso: i.peso == null ? 0 : i.peso, dano: i.dano || '', range: i.range || '',
     custo: i.custo || '', notas: i.obs || '',
@@ -345,6 +378,8 @@
   const inp = (k, val, extra = '') => `<input data-k="${k}" value="${esc(val)}" ${extra}>`;
   const numInp = (k, val, extra = '') => `<input type="number" data-k="${k}" value="${esc(val)}" ${extra}>`;
   const area = (k, val, extra = '') => `<textarea data-k="${k}" ${extra}>${esc(val)}</textarea>`;
+  // caixa de seleção; se o valor salvo não estiver entre as opções, mostra "—" até o usuário escolher
+  const selecao = (k, ops, val) => `<select data-k="${k}" data-r>${ops.includes(val) ? '' : opt('', '—', '')}${ops.map((o) => opt(o, o, val)).join('')}</select>`;
   const campo = (rot, html) => `<label class="campo"><span>${rot}</span>${html}</label>`;
   const stat = (rot, valorHtml, det = '') => `<div class="stat"><span class="rotulo">${rot}</span><span class="valor">${valorHtml}</span>${det ? `<span class="det">${det}</span>` : ''}</div>`;
 
@@ -543,19 +578,23 @@
     return `<details class="item">
       <summary>
         <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${num(j.aprim) ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
-        <span class="item-meta"><span>Custo <b>${esc(j.custo) || '—'}</b></span><span>PA <b>${esc(j.pa) || '—'}</b></span><span>Range <b>${esc(j.range) || '—'}</b></span><span>Dano <b>${esc(j.dano) || '—'}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
+        <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(j.dano) || '—'}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
       </summary>
       <div class="item-corpo">
         <div class="campos">
           ${campo('Nome', inp(k('n'), j.n))}
-          ${campo('Rank', inp(k('rank'), j.rank))}
-          ${campo('Custo', inp(k('custo'), j.custo))}
-          ${campo('Custo de Ações', inp(k('pa'), j.pa))}
-          ${campo('Range', inp(k('range'), j.range))}
+          ${campo('Rank', selecao(k('rank'), RANKS_JUTSU, j.rank))}
+          <div class="campo"><span>Custo</span><div class="linha" style="gap:6px;flex-wrap:nowrap">
+            <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
+            ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `min="0" class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
+          </div></div>
+          <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
+          ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
+          ${campo('Área', selecao(k('area'), AREAS, j.area))}
           ${campo('Dano', inp(k('dano'), j.dano))}
           ${campo('Requerimentos', inp(k('req'), j.req))}
-          ${campo('Aprendizado', inp(k('apr'), j.apr, 'placeholder="C, I, T ou D"'))}
-          ${campo('Rank de aprimoramento', numInp(k('aprim'), j.aprim || 0, 'min="0" max="5"'))}
+          ${campo('Aprendizado', selecao(k('apr'), APRENDIZADOS, j.apr))}
+          <label class="campo-linha"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="5" class="mini"')}</label>
         </div>
         ${campo('Efeito', area(k('efeito'), j.efeito, 'rows="4"'))}
         ${campo('Anotações', area(k('notas'), j.notas, 'rows="2" placeholder="Aprimoramentos feitos, combinações, etc."'))}
@@ -576,12 +615,12 @@
         <div class="painel-topo"><h2>Técnicas conhecidas</h2><span class="extra">${F.jutsus.length} técnica(s)</span></div>
         <div class="barra-ferr">
           <input type="search" id="jBusca" placeholder="Buscar nas suas técnicas" value="${esc(ui.jq)}" aria-label="Buscar nas suas técnicas">
-          <select id="jRank" aria-label="Filtrar por rank" style="width:auto">${opt('', 'Todos os ranks', ui.jrank)}${R.RANKS.map((r) => opt(r, 'Rank ' + r, ui.jrank)).join('')}</select>
+          <select id="jRank" aria-label="Filtrar por rank" style="width:auto">${opt('', 'Todos os ranks', ui.jrank)}${RANKS_JUTSU.map((r) => opt(r, 'Rank ' + r, ui.jrank)).join('')}</select>
           <button class="btn primario" data-acao="abrirCatalogo">Adicionar do livro de jutsus</button>
           <button class="btn" data-acao="novaTecnica">Técnica criada em treino</button>
           ${iniciais.length ? `<button class="btn" data-acao="iniciais">Técnicas iniciais (I) do clã/habilidade · ${iniciais.length}</button>` : ''}
         </div>
-        <p class="sub">${compra ? `<span class="tag aviso">Nível ${F.nivel} permite compra de jutsus</span> ` : ''}Níveis de compra: ${NIVEIS_COMPRA.join(', ')}. Em cada um: 1 jutsu do seu rank ou 2 de ranks inferiores${D.jutsuExtra ? `, mais ${D.jutsuExtra} extra(s) pelo Carisma` : ''}. Aprendizado: C comprável · I inicial · T treinamento · D despertar.</p>
+        ${compra ? `<p><span class="tag aviso">Nível ${F.nivel} permite compra de jutsus</span></p>` : ''}
         <div class="lista" id="listaJutsus">${lista.map(([j, i]) => cartaoJutsu(j, i)).join('') || '<div class="vazio">Nenhuma técnica. Adicione pelo livro de jutsus ou registre uma técnica criada.</div>'}</div>
       </section>
     </div>`;
@@ -1119,7 +1158,7 @@
       if (aba === 'jutsus') render();
     },
     novaTecnica() {
-      F.jutsus.push({ id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custo: '', efeito: '', dano: '', req: '', range: '', apr: '', pa: '2 PA', aprim: 0, notas: '', origem: 'criada' });
+      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', dano: '', req: '', range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
       ui.jq = ''; ui.jrank = '';
       render();
       const d = $$('#listaJutsus details'); const alvo = d.find((x) => x.querySelector('.item-nome').textContent === 'Nova técnica');

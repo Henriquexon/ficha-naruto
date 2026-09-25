@@ -216,7 +216,8 @@ p { margin: 0; }
 /* Campos */
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .campo { display: grid; gap: 4px; min-width: 0; }
-.campo > span, .rotulo { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+.campo-linha { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+.campo-linha > span, .campo > span, .rotulo { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
 input[type="text"], input[type="number"], input:not([type]), select, textarea {
   width: 100%; min-width: 0;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px;

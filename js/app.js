@@ -41,7 +41,7 @@
   // ---------------------------------------------------------------- modelo
   function fichaVazia() {
     const attrs = {};
-    R.ATRIBUTOS.forEach((a) => { attrs[a.id] = { pts: 0, outros: 0 }; });
+    R.ATRIBUTOS.forEach((a) => { attrs[a.id] = { pts: 0 }; });
     return {
       v: 1, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
       cla: 'sem', claEscolha: 'nin', classe: 'equilibrado', classeEscolhas: [],
@@ -65,7 +65,7 @@
   function normalizar(f) {
     const base = fichaVazia();
     const out = Object.assign(base, f || {});
-    R.ATRIBUTOS.forEach((a) => { out.attrs[a.id] = Object.assign({ pts: 0, outros: 0 }, (f && f.attrs && f.attrs[a.id]) || {}); });
+    R.ATRIBUTOS.forEach((a) => { out.attrs[a.id] = { pts: num(((f && f.attrs && f.attrs[a.id]) || {}).pts) }; });
     out.bonus = Object.assign(fichaVazia().bonus, (f && f.bonus) || {});
     out.dn = Object.assign(fichaVazia().dn, (f && f.dn) || {});
     out.morte = Object.assign({ v: 0, d: 0 }, (f && f.morte) || {});
@@ -79,6 +79,7 @@
     if (!Array.isArray(out.pericias)) out.pericias = ['', '', '', ''];
     while (out.pericias.length < 4) out.pericias.push('');
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
+    if (out.patente === 'ANBU') out.patente = 'Anbu';
     return out;
   }
 
@@ -177,7 +178,7 @@
       const k = custoAtributo(inicio, pts);
       D.custo[a.id] = k.c; gasto += k.c;
       if (k.acima) D.avisos.push(`${a.nome} passou de 2 na distribuição inicial.`);
-      D.attr[a.id] = inicio + pts + D.clsB[a.id] + num(F.attrs[a.id].outros);
+      D.attr[a.id] = inicio + pts + D.clsB[a.id];
     });
     D.pontosAttr = gasto;
     if (gasto > 9) D.avisos.push(`Foram gastos ${gasto} pontos; o limite na criação é 9.`);
@@ -317,11 +318,10 @@
         ${campo('Patente', `<select data-k="patente">${R.PATENTES.map((p) => opt(p, p, F.patente)).join('')}</select>`)}
       </div>
       <div class="campos">
-        ${campo('Clã', `<select data-k="cla" data-r>${R.CLAS.map((c) => opt(c.id, `${c.nome}${c.pc != null ? ` · ${c.pc} PC` : ''}`, F.cla)).join('')}</select>`)}
+        ${campo('Clã', `<select data-k="cla" data-r title="${esc(cla.desc)}">${R.CLAS.map((c) => `<option value="${c.id}" title="${esc(c.desc)}"${c.id === F.cla ? ' selected' : ''}>${esc(c.nome)}${c.pc != null ? ` · ${c.pc} PC` : ''}</option>`).join('')}</select>`)}
         ${cla.escolha ? campo('Atributo do clã', `<select data-k="claEscolha" data-r>${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.claEscolha)).join('')}</select>`) : ''}
         ${campo('Classe', `<select data-k="classe" data-r>${R.CLASSES.map((c) => opt(c.id, c.nome, F.classe)).join('')}</select>`)}
       </div>
-      <p class="sub">${esc(cla.desc)}</p>
       ${cls ? `<div class="linha"><span class="rotulo">Classe</span><span class="sub">${cls.vida} vida/nível · ${cls.chakra} chakra/nível${cla.vidaFixa ? ' (Hoozuki: 6 vida e 6 chakra por nível)' : ''}</span>${clsSel}</div>` : ''}
       <div class="pilha">
         <span class="rotulo">Elementos</span>
@@ -342,30 +342,28 @@
 
     const linhasAttr = R.ATRIBUTOS.map((a) => `
       <tr>
-        <td><div class="attr-nome">${a.nome}</div><div class="attr-desc attr-sobre">${esc(a.desc)}</div></td>
+        <td><div class="attr-nome">${a.nome}</div></td>
         <td class="c num">${sinal(D.claB[a.id])}</td>
         <td class="c"><input type="number" class="micro" min="0" max="5" data-k="attrs.${a.id}.pts" value="${F.attrs[a.id].pts}" aria-label="Pontos distribuídos em ${a.nome}"><div class="attr-desc"><span data-d="custo.${a.id}">${D.custo[a.id]}</span> pt</div></td>
         <td class="c num">${sinal(D.clsB[a.id])}</td>
-        <td class="c"><input type="number" class="micro" data-k="attrs.${a.id}.outros" value="${F.attrs[a.id].outros}" aria-label="Outros bônus em ${a.nome}"></td>
         <td class="c"><span class="mod${D.attr[a.id] < 0 ? ' neg' : ''}" data-d="attr.${a.id}" data-fmt="sinal">${sinal(D.attr[a.id])}</span></td>
-        <td class="c"><button class="dado" data-acao="rolar" data-attr="${a.id}" aria-label="Rolar d20 + ${a.nome}">d20</button></td>
       </tr>`).join('');
 
     const atributos = `
     <section class="painel c7">
       <div class="painel-topo"><h2>Atributos</h2><span class="extra">Distribuídos: <b class="num" data-d="pontosAttr">${D.pontosAttr}</b> de 9</span></div>
       <div class="tabela-wrap"><table class="tab-attr">
-        <thead><tr><th>Atributo</th><th class="c">Clã</th><th class="c">Pontos</th><th class="c">Classe</th><th class="c">Outros</th><th class="c">Mod</th><th></th></tr></thead>
+        <thead><tr><th>Atributo</th><th class="c">Clã</th><th class="c">Pontos</th><th class="c">Classe</th><th class="c">Mod</th></tr></thead>
         <tbody>${linhasAttr}</tbody>
       </table></div>
       <div class="aviso" id="avisosAttr" ${D.avisos.length ? '' : 'hidden'}>${D.avisos.map(esc).join('<br>')}</div>
-      <p class="sub">Todo atributo começa em −1. Na criação distribua 9 pontos (máximo 2 por atributo); passar de 1 para 2 custa 2 pontos. Use “Outros” para treinos, perícias, talentos e o nível 20.</p>
+      <p class="sub">Todo atributo começa em −1. Na criação distribua 9 pontos (máximo 2 por atributo); passar de 1 para 2 custa 2 pontos.</p>
     </section>`;
 
     const dnCard = (id, nome, form) => `<div class="dn"><div class="dn-topo"><span class="dn-nome">${nome}</span><span class="dn-valor num" data-d="dn.${id}">${D.dn[id]}</span></div><span class="dn-form">${form}</span></div>`;
     const defesas = `
     <section class="painel c5">
-      <div class="painel-topo"><h2>Defesa Ninja (DN)</h2><span class="extra">Escolha antes da rolagem de ataque</span></div>
+      <div class="painel-topo"><h2>Defesa Ninja (DN)</h2></div>
       <div class="dns">
         ${dnCard('tai', 'Taijutsu', '6 + Tai')}
         ${dnCard('nin', 'Ninjutsu', '8 + Nin')}
@@ -381,21 +379,20 @@
         ${campo('Técnica de contra-ataque', inp('dn.contra', F.dn.contra))}
         ${campo('Bônus em todas as DN', numInp('bonus.dn', F.bonus.dn))}
       </div>
-      <p class="sub">As técnicas de DN só podem ser trocadas em descansos. Constituição: se o ataque falhar, o dano cai pela metade. “Preparar defesa” (turno inteiro) dá +3 na próxima DN.</p>
     </section>`;
 
     const combate = `
     <section class="painel c7">
-      <div class="painel-topo"><h2>Combate</h2><span class="extra">Turno padrão: 3 PA · 1 jogada de ataque</span></div>
+      <div class="painel-topo"><h2>Combate</h2></div>
       <div class="stats">
-        ${stat('Deslocamento', `<span data-d="desl">${D.desl}</span> m`, '5 + Des')}
-        ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="12" class="mini"')}`, `Com Int ${sinal(D.attr.int)}, treinos permitem até <b data-d="paMax">${D.paMax}</b> PA`)}
-        ${stat('Regen. de chakra', `<span data-d="regen">${D.regen}</span>`, 'Turno inteiro em Concentração')}
-        ${stat('Percepção passiva', `<span data-d="percepcao">${D.percepcao}</span>`, `${percepcaoBase(F.nivel)} + Int`)}
-        ${stat('Soco', `<select data-k="soco" data-r aria-label="Nível do soco" style="width:auto">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nv ${i + 1} · ${s[1]}`, F.soco)).join('')}</select>`, `Rank ${D.soco[0]} na tabela de soco`)}
-        ${stat('Carregamento', `<span data-d="peso" data-fmt="g">${fmtKg(D.peso / 1000)}</span>`, `de <span data-d="carga" data-fmt="kg">${fmtKg(D.carga)}</span> (2,5 kg + Cons)`)}
-        ${stat('Arremesso por PA', `<span data-d="arremesso">${D.arremesso}</span> g`, 'Metade com uma mão ocupada')}
-        ${stat('Protagonismo', `<span data-v="protagonismo">${F.protagonismo}</span>/<span data-d="protMax">${D.protMax}</span>`, `<button class="link" data-acao="prot" data-d2="-1">usar</button> · <button class="link" data-acao="prot" data-d2="1">recuperar</button>`)}
+        ${stat('Deslocamento', `<span data-d="desl">${D.desl}</span> m`)}
+        ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="12" class="mini"')}`)}
+        ${stat('Regen. de chakra', `<span data-d="regen">${D.regen}</span>`)}
+        ${stat('Percepção passiva', `<span data-d="percepcao">${D.percepcao}</span>`)}
+        ${stat('Soco', `<select data-k="soco" data-r aria-label="Nível do soco" style="width:auto">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nv ${i + 1} · ${s[1]}`, F.soco)).join('')}</select>`)}
+        ${stat('Carregamento', `<span data-d="peso" data-fmt="g">${fmtKg(D.peso / 1000)}</span> / <span data-d="carga" data-fmt="kg">${fmtKg(D.carga)}</span>`)}
+        ${stat('Arremesso por PA', `<span data-d="arremesso">${D.arremesso}</span> g`)}
+        ${stat('Protagonismo', `<span class="linha" style="gap:6px;flex-wrap:nowrap"><button class="btn-ico" data-acao="prot" data-d2="-1" aria-label="Usar ponto de protagonismo">−</button><span><span data-v="protagonismo">${F.protagonismo}</span>/<span data-d="protMax">${D.protMax}</span></span><button class="btn-ico" data-acao="prot" data-d2="1" aria-label="Recuperar ponto de protagonismo">+</button></span>`)}
       </div>
       <details class="item"><summary><span class="item-linha"><span class="item-nome">Bônus extras (perícias, talentos, técnicas)</span><span class="sub">editar</span></span></summary>
         <div class="item-corpo">
@@ -427,7 +424,26 @@
       <p class="sub">Testes de especialização só são usados fora de batalha. ${D.espUsadas > D.espQtd ? '<span class="tag aviso">Acima do limite do nível</span>' : ''}</p>
     </section>`;
 
-    return `<div class="grade">${identidade}${vit}${atributos}${defesas}${combate}${esp}</div>`;
+    return `<div class="grade">${identidade}${vit}${atributos}${defesas}${combate}${esp}${painelPontosCriacao()}</div>`;
+  }
+
+  function painelPontosCriacao() {
+    const talOpts = R.TALENTOS.filter((t) => !temTalento(t.nome)).map((t) => opt(t.nome, `${t.nome} (${t.pc} PC)`)).join('');
+    return `
+    <section class="painel c12">
+      <div class="painel-topo"><h2>Pontos de Criação</h2><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
+      <div class="stats">
+        ${stat('Clã', D.pc.cla)}${stat('Habilidades inatas', D.pc.inatas)}${stat('Talentos', D.pc.talentos)}
+      </div>
+      ${D.pc.total > 20 ? '<div class="aviso">Os PC gastos passaram de 20.</div>' : ''}
+      <span class="rotulo">Talentos</span>
+      <div class="lista">${F.talentos.map((t, i) => { const def = R.TALENTOS.find((x) => x.nome === t.nome) || {}; return `
+        <div class="item"><div class="item-corpo">
+          <div class="item-linha"><span class="item-nome">${esc(t.nome)}</span><label class="linha sub">PC ${numInp(`talentos.${i}.pc`, t.pc, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalento" data-i="${i}" aria-label="Remover talento">×</button></div>
+          <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
+        </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
+      <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
+    </section>`;
   }
 
   function painelVitalidade() {
@@ -450,10 +466,8 @@
         ${recurso('vida', 'Vida', 'pvAtual', 'vidaMax', 'sobrevida', 'Sobrevida')}
         ${recurso('chakra', 'Chakra', 'chakraAtual', 'chakraMax', 'sobrechakra', 'Sobrechakra')}
       </div>
-      <p class="sub">Vida: ${F.nivel} × (${D.vidaDado}${D.cla.vidaNivel ? ` + ${D.cla.vidaNivel}` : ''} ${D.consNivel >= 0 ? '+' : '−'} ${Math.abs(D.consNivel)} Cons)${num(F.bonus.vida) ? ` ${sinal(num(F.bonus.vida))} extras` : ''}.
-        Chakra: ${F.nivel} × ${D.chakraDado + (D.cla.chakraNivel || 0)}${num(F.bonus.chakra) ? ` ${sinal(num(F.bonus.chakra))} extras` : ''}${D.mestreTai ? ', metade por Mestre em Taijutsu' : ''}${D.bijuuRed ? `, −${D.bijuuRed} da Bijuu` : ''}.</p>
       <div class="pilha">
-        <span class="rotulo">Testes contra a morte · 1d20 + Cons ≥ 10</span>
+        <span class="rotulo">Testes contra a morte</span>
         <div class="linha">
           <span class="trilha" aria-label="Sucessos">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="v" data-i="${i}" ${F.morte.v >= i ? 'checked' : ''} aria-label="Sucesso ${i}">`).join('')} <span class="sub">sucessos</span></span>
           <span class="trilha falha" aria-label="Falhas">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="d" data-i="${i}" ${F.morte.d >= i ? 'checked' : ''} aria-label="Falha ${i}">`).join('')} <span class="sub">falhas</span></span>
@@ -632,22 +646,6 @@
 
   // ---------------------------------------------------------------- ABA: Evolução
   function abaEvolucao() {
-    const talOpts = R.TALENTOS.filter((t) => !temTalento(t.nome)).map((t) => opt(t.nome, `${t.nome} (${t.pc} PC)`)).join('');
-    const talentos = `
-    <section class="painel c6">
-      <div class="painel-topo"><h2>Pontos de Criação</h2><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
-      <div class="stats">
-        ${stat('Clã', D.pc.cla)}${stat('Habilidades inatas', D.pc.inatas)}${stat('Talentos', D.pc.talentos)}
-      </div>
-      ${D.pc.total > 20 ? '<div class="aviso">Os PC gastos passaram de 20.</div>' : ''}
-      <span class="rotulo">Talentos</span>
-      <div class="lista">${F.talentos.map((t, i) => { const def = R.TALENTOS.find((x) => x.nome === t.nome) || {}; return `
-        <div class="item"><div class="item-corpo">
-          <div class="item-linha"><span class="item-nome">${esc(t.nome)}</span><label class="linha sub">PC ${numInp(`talentos.${i}.pc`, t.pc, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalento" data-i="${i}" aria-label="Remover talento">×</button></div>
-          <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
-        </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
-      <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
-    </section>`;
 
     const slots = F.pericias.map((p, i) => campo(`Perícia ${i + 1} · nível ${NIVEIS_PERICIA[i]}${F.nivel < NIVEIS_PERICIA[i] ? ' (bloqueada)' : ''}`,
       `<select data-k="pericias.${i}" data-r>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`)).join('');
@@ -687,7 +685,7 @@
     const intK = String(clamp(D.attr.int, -2, 5));
     const pontos = R.PONTOS_TREINO[intK][tc.dur][R.RANKS.indexOf(rankT)];
     const treinos = `
-    <section class="painel c6">
+    <section class="painel c5">
       <div class="painel-topo"><h2>Treinos</h2><span class="extra">Int ${sinal(D.attr.int)}</span></div>
       <div class="campos">
         ${campo('Duração', `<select data-k="treinoCalc.dur" data-r>${opt('curto', 'Curto (semanas)', tc.dur)}${opt('medio', 'Médio (meses)', tc.dur)}${opt('longo', 'Longo (anos)', tc.dur)}</select>`)}
@@ -705,7 +703,7 @@
     </section>`;
 
     const escal = `
-    <section class="painel c12">
+    <section class="painel c7">
       <div class="painel-topo"><h2>Escalonamento de nível</h2><span class="extra">Nível atual destacado</span></div>
       <div class="tabela-wrap"><table class="nivel-tab"><tbody>
         ${Object.entries(R.ESCALONAMENTO).map(([lv, t]) => `<tr class="${Number(lv) === F.nivel ? 'atual' : Number(lv) < F.nivel ? 'passado' : ''}"><td>${lv}</td><td>${esc(t) || '—'}</td></tr>`).join('')}
@@ -713,7 +711,7 @@
       <p class="sub">Sem comprar jutsu, o ninja pode receber Ryo de missão do rank: níveis 1, 2 e 4: 200 · 7 e 9: 400 · 12 e 14: 800 · 17, 19 e 20: 1600.</p>
     </section>`;
 
-    return `<div class="grade">${talentos}${pericias}${upgrades}${treinos}${escal}</div>`;
+    return `<div class="grade">${pericias}${upgrades}${treinos}${escal}</div>`;
   }
 
   // ---------------------------------------------------------------- ABA: Aliados
@@ -827,7 +825,7 @@
           ${sh.nivel >= 4 ? '<li>Mangekyou: +2 Nin e +2 Gen adicionais (+4 ao todo); custo 2× o Sharingan por turno.</li>' : ''}
           <li>Custo: 10 de chakra por turno. Sem despertar, os tomoe chegam nos níveis 5, 10 e 15; o Mangekyou no nível 20.</li>
         </ul>
-        <p class="sub">Some os bônus do estágio em “Outros” dos atributos e em “Bônus em todas as DN” enquanto estiver ativo.</p>
+        <p class="sub">Some o bônus de DN do estágio em “Bônus em todas as DN” enquanto estiver ativo.</p>
         <div class="pilha">
           <div class="painel-topo"><span class="rotulo">Medidor de cegueira (Mangekyou)</span><span class="num"><b data-v="sharingan.cegueira">${sh.cegueira}</b> / 100</span></div>
           <div class="medidor"><div style="width:${clamp(sh.cegueira, 0, 100)}%"></div></div>
@@ -1008,7 +1006,6 @@
     remInata(el) { F.inatas = F.inatas.filter((x) => x !== el.dataset.id); return true; },
     remTalento(el) { F.talentos.splice(+el.dataset.i, 1); return true; },
     remTalPer(el) { F.talentosPericia.splice(+el.dataset.i, 1); return true; },
-    rolar(el) { const a = el.dataset.attr; rolar(attrNome(a), D.attr[a]); },
     rolarEsp(el) {
       const e = R.ESPECIALIZACOES.find((x) => x.id === el.dataset.id); const st = F.esp[e.id] || {};
       const at = e.attrs.includes(st.attr) ? st.attr : e.attrs[0];

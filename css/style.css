@@ -359,7 +359,6 @@ details.modulo > .modulo-corpo { padding: 0 16px 16px; display: grid; gap: 12px;
   .painel { padding: 13px; }
 }
 @media (max-width: 480px) {
-  .attr-sobre { display: none; }
   .tab-attr th, .tab-attr td { padding: 5px 3px; }
   .tab-attr .mod { min-width: 34px; font-size: 1.1rem; }
   .tab-attr th { letter-spacing: 0; font-size: .6rem; }

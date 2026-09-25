@@ -292,7 +292,7 @@ window.REGRAS = (function () {
     { id: 'doton', nome: 'Doton', sigla: 'Dt', efeito: 'Derrubar (D). Pode criar barreiras e armaduras.' },
   ];
 
-  const PATENTES = ['Gennin', 'Chunnin', 'Jounnin', 'ANBU'];
+  const PATENTES = ['Nenhuma', 'Estudante', 'Gennin', 'Chunnin', 'Jounnin', 'Anbu'];
 
   const ESCALONAMENTO = {
     1: 'Permitida a compra de 2 jutsus ou 2 missões rank D; 1 Especialização (+1 de Mod); Regeneração de chakra = 5; Descanso Curto recupera 1 dado de vida e chakra; Percepção passiva = 8 + Inteligência.',

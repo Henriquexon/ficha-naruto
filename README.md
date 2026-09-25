@@ -23,24 +23,24 @@ A ficha abre com um personagem de exemplo. Em **Fichas** dá para criar novas fi
 
 ### Abas
 
-- **Ficha**: identidade (clã, classe, patente, elementos, habilidades inatas), atributos com a conta dos 9 pontos da criação, vida e chakra com dano/cura, sobrevida e sobrechakra, testes contra a morte, condições, descansos, as 7 DNs, deslocamento, PA, regeneração, percepção passiva, soco, carregamento, protagonismo e especializações. Os botões `d20` rolam o teste com o modificador.
+- **Ficha**: identidade (clã, classe, patente, elementos, habilidades inatas; a descrição do clã aparece ao passar o mouse), atributos com a conta dos 9 pontos da criação, Pontos de Criação (20 PC) e talentos, vida e chakra com dano/cura, sobrevida e sobrechakra, testes contra a morte, condições, descansos, as 7 DNs, deslocamento, PA, regeneração, percepção passiva, soco, carregamento, protagonismo e especializações. Os botões de especialização rolam o teste com o modificador.
 - **Jutsus**: técnicas do personagem. Adicione pelo livro de jutsus (busca por nome/efeito, filtro por categoria, rank e “só do meu clã”), adicione de uma vez as técnicas iniciais (I) do clã e das habilidades inatas, ou registre uma técnica criada em treino.
 - **Inventário**: itens da loja ou personalizados, quantidade, peso total contra o limite de carregamento, Ryo.
-- **Evolução**: Pontos de Criação (20 PC), talentos, as 4 perícias com os benefícios acumulados, talentos de perícia, upgrades de clã, calculadora de pontos de treino e registro de treinos, escalonamento com o nível atual destacado.
+- **Evolução**: as 4 perícias com os benefícios acumulados, talentos de perícia, upgrades de clã, calculadora de pontos de treino e registro de treinos, escalonamento com o nível atual destacado.
 - **Aliados**: invocações e companheiros (do catálogo ou em branco) e marionetes com compartimentos e componentes.
 - **Especial**: Jinchuuriki (bijuu, custo do selo, laço de amizade), Sharingan e medidor de cegueira do Mangekyou, 8 Portões, penalidades de Jashin, máscaras do Jiongu. Os módulos relevantes ao personagem abrem sozinhos.
 - **História**: alinhamento, ideal, fraqueza, vínculo, história e anotações.
 
 ## Contas automáticas
 
-- **Atributos**: `−1 + clã + pontos distribuídos + classe + outros`. O custo da distribuição segue a tabela da criação (passar de 1 para 2 custa 2).
+- **Atributos**: `−1 + clã + pontos distribuídos + classe`. O custo da distribuição segue a tabela da criação (passar de 1 para 2 custa 2).
 - **Vida máxima**: `nível × (vida por nível da classe + extra do clã + Cons/2 arredondado para baixo) + extras`. Constituição negativa entra inteira por nível. Hoozuki usa 6/6 por nível; Senju e Uzumaki somam o extra por nível.
 - **Chakra máximo**: `nível × (chakra por nível da classe + extra do clã) + extras`, metade com o talento Mestre em Taijutsu, menos o custo do selo da bijuu (2/3/4 por nível, mínimo 2) enquanto não houver laço de amizade.
 - **DN**: Taijutsu 6 + Tai · Ninjutsu 8 + Nin · Constituição 10 + Cons · Destreza 6 + Des · Genjutsu 8 + Gen · Contra-ataque 4 + atributo escolhido · Inteligência = percepção passiva.
 - **Rank** pelo nível: D (1–4), C (5–9), B (10–14), A (15–19), S (20).
 - **Descanso curto**: 1 dado de vida e chakra (3 a partir do nível 10, 6 no nível 20; o dobro com a 3ª perícia de Resistência). **Descanso longo**: recupera tudo e tira 20 de cegueira.
 
-Bônus que dependem de escolha do jogador (perícias, talentos de valor variável, técnicas ativas como Byakugan e Sharingan) entram à mão nos campos “Outros” dos atributos e em “Bônus extras”.
+Bônus que dependem de escolha do jogador (perícias, talentos de valor variável, técnicas ativas como Byakugan e Sharingan) entram à mão em “Bônus extras” e “Bônus em todas as DN”.
 
 ## Pontos em que os documentos se contradizem
 

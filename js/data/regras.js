@@ -403,8 +403,65 @@ window.REGRAS = (function () {
     { nome: 'Kurama', caudas: 9, papinho: 205, pv: 6000, chakra: 10000, dn: 20, atk: 33 },
   ];
 
+  // Efeitos numéricos das perícias, aplicados automaticamente na ficha.
+  // g = "Garante" (vale a cada vez que a perícia é obtida); 1..4 = "Se obtida N vezes".
+  // fixo: bônus sempre aplicado; esc: escolhas do jogador, cada uma [id, rótulo, bônus].
+  // Bônus: vida, chakra, regen, desl, carga (kg), arremesso (g), soco (níveis), attrs {id: +n}.
+  const umAtr = (ids) => ids.map((a) => [a, '+1 ' + ATRIBUTOS.find((x) => x.id === a).nome, { attrs: { [a]: 1 } }]);
+  const TODOS = ['car', 'cons', 'des', 'gen', 'int', 'nin', 'tai'];
+  const CCI = ['car', 'cons', 'int'];
+  const PERICIAS_AUTO = {
+    ninjutsu: {
+      g: { fixo: { regen: 5 }, esc: [[['chakra', '+10 de chakra', { chakra: 10 }], ['elemento', 'Mais um elemento', {}]]] },
+      2: { fixo: { attrs: { nin: 1 } } },
+      3: { fixo: { attrs: { nin: 1 } }, esc: [umAtr(CCI)] },
+      4: { fixo: { regen: 5 }, esc: [[['chakra', '+10 de chakra', { chakra: 10 }], ['elemento', 'Elemento aleatório', {}]]] },
+    },
+    genjutsu: {
+      g: { fixo: { chakra: 25 } },
+      2: { fixo: { attrs: { gen: 1 } } },
+      3: { fixo: { attrs: { gen: 1 } }, esc: [umAtr(CCI)] },
+      4: { fixo: { chakra: 15 } },
+    },
+    taijutsu: {
+      g: { fixo: { vida: 5, soco: 1 } },
+      1: { fixo: { desl: 1 } },
+      2: { fixo: { attrs: { tai: 1 } } },
+      3: { fixo: { attrs: { tai: 1 } }, esc: [umAtr(CCI)] },
+      4: { fixo: { vida: 5, soco: 1 } },
+    },
+    armas: {
+      g: { esc: [[['arremesso', '+250 g de arremesso por PA', { arremesso: 250 }], ['carga', '+500 g de carregamento', { carga: 0.5 }]]] },
+      2: { fixo: { attrs: { des: 1 } } },
+      3: { fixo: { attrs: { des: 1 } }, esc: [umAtr(CCI)] },
+      4: { esc: [[['arremesso', '+200 g de arremesso por PA', { arremesso: 200 }], ['carga', '+500 g de carregamento', { carga: 0.5 }]]] },
+    },
+    kugutsu: {
+      g: { fixo: { chakra: 25, carga: 0.5 } },
+      2: { fixo: { attrs: { nin: 1 } } },
+      3: { fixo: { attrs: { nin: 1 } }, esc: [umAtr(CCI)] },
+      4: { fixo: { chakra: 15 } },
+    },
+    resistencia: {
+      g: { fixo: { vida: 15 } },
+      2: { fixo: { attrs: { cons: 1 } } },
+      3: { fixo: { attrs: { cons: 1 } }, esc: [umAtr(CCI)] },
+      4: { fixo: { vida: 15 } },
+    },
+    medicina: {
+      g: { fixo: { regen: 5 } },
+      2: { esc: [umAtr(TODOS)] },
+      3: { esc: [umAtr(TODOS), umAtr(CCI)] },
+      4: { fixo: { regen: 5 } },
+    },
+    jiongu: {
+      2: { esc: [umAtr(TODOS)] },
+      3: { esc: [umAtr(TODOS), umAtr(CCI)] },
+    },
+  };
+
   return {
-    ATRIBUTOS, CLASSES, CLAS, INATAS, TALENTOS, PERICIAS, ESPECIALIZACOES, ALINHAMENTOS, ELEMENTOS, PATENTES,
+    ATRIBUTOS, PERICIAS_AUTO, CLASSES, CLAS, INATAS, TALENTOS, PERICIAS, ESPECIALIZACOES, ALINHAMENTOS, ELEMENTOS, PATENTES,
     ESCALONAMENTO, SOCO, RANKS, PONTOS_TREINO, TABELA_TREINO, CONDICOES, CD_RANK, DISTANCIAS,
     PORTOES, JASHIN_PENALIDADES, BIJUUS,
   };

@@ -43,14 +43,14 @@
     const attrs = {};
     R.ATRIBUTOS.forEach((a) => { attrs[a.id] = { pts: 0 }; });
     return {
-      v: 1, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
+      v: 2, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
       cla: 'sem', claEscolha: 'nin', classe: 'equilibrado', classeEscolhas: [],
       inatas: [], elementos: [], attrs,
       bonus: { vida: 0, chakra: 0, regen: 0, desl: 0, carga: 0, arremesso: 0, dn: 0 },
       pvAtual: null, chakraAtual: null, sobrevida: 0, sobrechakra: 0, protagonismo: null,
       morte: { v: 0, d: 0 }, condicoes: {}, pa: 3, soco: 1,
       dn: { nin: '', gen: '', contra: '', contraAttr: 'tai' },
-      esp: {}, pericias: ['', '', '', ''], talentosPericia: [], talentos: [],
+      esp: {}, pericias: ['', '', '', ''], periciasEsc: [{}, {}, {}, {}], talentosPericia: [], talentos: [],
       upgrades: { 5: '', 10: '', 15: '', 20: '' },
       jutsus: [], itens: [], ryo: 0, companheiros: [], marionetes: [],
       bijuu: { nome: '', aliado: false, papinho: 0 },
@@ -78,6 +78,14 @@
       .forEach((k) => { if (!Array.isArray(out[k])) out[k] = []; });
     if (!Array.isArray(out.pericias)) out.pericias = ['', '', '', ''];
     while (out.pericias.length < 4) out.pericias.push('');
+    if (!Array.isArray(out.periciasEsc)) out.periciasEsc = [];
+    for (let i = 0; i < 4; i++) if (!out.periciasEsc[i] || typeof out.periciasEsc[i] !== 'object') out.periciasEsc[i] = {};
+    // v1: o exemplo somava a perícia de Ninjutsu à mão; agora ela é automática
+    if (num(out.v, 1) < 2 && /\(exemplo\)$/.test(out.nome || '') && out.pericias[0] === 'ninjutsu') {
+      out.bonus.chakra = Math.max(0, num(out.bonus.chakra) - 10);
+      out.bonus.regen = Math.max(0, num(out.bonus.regen) - 5);
+    }
+    out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
     return out;
@@ -92,7 +100,7 @@
     f.elementos = ['katon', 'fuuton'];
     f.attrs.nin.pts = 2; f.attrs.des.pts = 2; f.attrs.int.pts = 2; f.attrs.tai.pts = 1; f.attrs.cons.pts = 1;
     f.pericias = ['ninjutsu', '', '', ''];
-    f.bonus.chakra = 10; f.bonus.regen = 5;
+    f.periciasEsc[0] = { g0: 'chakra' };
     f.esp = { percepcao: { on: true }, furtividade: { on: false } };
     f.dn = { nin: 'Kawarimi no Jutsu (Técnica de Substituição de Corpo)', gen: '', contra: '', contraAttr: 'tai' };
     f.upgrades[5] = 'Exemplo: aprimoramento do Goukakyuu no Jutsu.';
@@ -171,6 +179,36 @@
       const pick = g.op.length === 1 ? g.op[0] : (g.op.includes(F.classeEscolhas[i]) ? F.classeEscolhas[i] : g.op[0]);
       D.clsB[pick] += g.v;
     });
+    // Perícias: só contam as vagas já liberadas pelo nível (4, 9, 14, 19)
+    const PB = { vida: 0, chakra: 0, regen: 0, desl: 0, carga: 0, arremesso: 0, soco: 0, attrs: {} };
+    const somar = (alvo, b) => {
+      Object.entries(b || {}).forEach(([k, v]) => {
+        if (k === 'attrs') Object.entries(v).forEach(([a, n2]) => { alvo.attrs[a] = (alvo.attrs[a] || 0) + n2; });
+        else alvo[k] = (alvo[k] || 0) + v;
+      });
+    };
+    D.periciaCont = {}; D.periciaSlots = [];
+    F.pericias.forEach((p, i) => {
+      if (!p || F.nivel < NIVEIS_PERICIA[i]) { D.periciaSlots[i] = null; return; }
+      const k = (D.periciaCont[p] || 0) + 1; D.periciaCont[p] = k;
+      const auto = R.PERICIAS_AUTO[p] || {};
+      const esc = F.periciasEsc[i] || {};
+      const slot = { id: p, k, escolhas: [], b: { attrs: {} } };
+      [['g', auto.g], ['n', auto[k]]].forEach(([pre, def]) => {
+        if (!def) return;
+        somar(slot.b, def.fixo);
+        (def.esc || []).forEach((ops, j) => {
+          const key = pre + j;
+          const sel = ops.find((o) => o[0] === esc[key]) || ops[0];
+          somar(slot.b, sel[2]);
+          slot.escolhas.push({ key, ops, sel: sel[0] });
+        });
+      });
+      somar(PB, slot.b);
+      D.periciaSlots[i] = slot;
+    });
+    D.periciaB = PB;
+
     let gasto = 0;
     R.ATRIBUTOS.forEach((a) => {
       const inicio = -1 + D.claB[a.id];
@@ -178,7 +216,7 @@
       const k = custoAtributo(inicio, pts);
       D.custo[a.id] = k.c; gasto += k.c;
       if (k.acima) D.avisos.push(`${a.nome} passou de 2 na distribuição inicial.`);
-      D.attr[a.id] = inicio + pts + D.clsB[a.id];
+      D.attr[a.id] = inicio + pts + D.clsB[a.id] + (PB.attrs[a.id] || 0);
     });
     D.pontosAttr = gasto;
     if (gasto > 9) D.avisos.push(`Foram gastos ${gasto} pontos; o limite na criação é 9.`);
@@ -189,8 +227,8 @@
     D.chakraDado = cla.chakraFixo || (cls ? cls.chakra : 0);
     D.consNivel = A.cons >= 0 ? Math.floor(A.cons / 2) : A.cons;
     D.vidaNivel = D.vidaDado + (cla.vidaNivel || 0) + D.consNivel;
-    D.vidaMax = Math.max(0, n * D.vidaNivel + num(F.bonus.vida));
-    let ch = n * (D.chakraDado + (cla.chakraNivel || 0)) + num(F.bonus.chakra);
+    D.vidaMax = Math.max(0, n * D.vidaNivel + num(F.bonus.vida) + PB.vida);
+    let ch = n * (D.chakraDado + (cla.chakraNivel || 0)) + num(F.bonus.chakra) + PB.chakra;
     D.chakraBase = ch;
     D.mestreTai = temTalento('Mestre em Taijutsu');
     if (D.mestreTai) ch = Math.max(1, Math.floor(ch / 2));
@@ -203,11 +241,11 @@
       if (!F.bijuu.aliado) { D.bijuuRed = porNivel * n; ch = Math.max(2, ch - D.bijuuRed); }
     }
     D.chakraMax = Math.max(0, ch);
-    D.regen = 5 + (n >= 10 ? 5 : 0) + num(F.bonus.regen);
-    D.desl = 5 + A.des + num(F.bonus.desl);
+    D.regen = 5 + (n >= 10 ? 5 : 0) + num(F.bonus.regen) + PB.regen;
+    D.desl = 5 + A.des + num(F.bonus.desl) + PB.desl;
     D.percepcao = percepcaoBase(n) + A.int;
-    D.carga = Math.max(0, 2.5 + A.cons) + num(F.bonus.carga);
-    D.arremesso = 500 + num(F.bonus.arremesso);
+    D.carga = Math.max(0, 2.5 + A.cons) + num(F.bonus.carga) + PB.carga;
+    D.arremesso = 500 + num(F.bonus.arremesso) + PB.arremesso;
     const b = num(F.bonus.dn);
     D.dn = {
       tai: 6 + A.tai + b, nin: 8 + A.nin + b, cons: 10 + A.cons + b, des: 6 + A.des + b,
@@ -223,14 +261,15 @@
     F.talentos.forEach((t) => { D.pc.talentos += num(t.pc); });
     D.pc.total = D.pc.cla + D.pc.inatas + D.pc.talentos;
     D.peso = F.itens.reduce((s, i) => s + num(i.qtd) * num(i.peso), 0);
-    D.periciaCont = {};
-    F.pericias.forEach((p) => { if (p) D.periciaCont[p] = (D.periciaCont[p] || 0) + 1; });
     D.pontosPericia = Object.values(D.periciaCont).reduce((s, c) => s + (c >= 2 ? 4 : 0) + (c >= 4 ? 4 : 0), 0);
     D.pontosPericiaGastos = F.talentosPericia.reduce((s, t) => s + num(t.pts), 0);
     D.jutsuExtra = A.car > 0 ? Math.ceil(A.car / 2) : 0;
     D.paMax = 3 + (A.int >= 3 ? 1 + Math.floor((A.int - 3) / 2) : 0);
     if (temTalento('Um Passo à Frente') && A.int >= 1) D.paMax = Math.max(D.paMax, 4);
-    D.soco = R.SOCO[clamp(num(F.soco, 1), 1, 12)];
+    // Soco: nível escolhido + níveis da perícia de Taijutsu; sem a 2ª perícia o máximo é o nível 4 (2d6)
+    const socoMax = (D.periciaCont.taijutsu || 0) >= 2 ? 12 : 4;
+    D.socoNv = clamp(clamp(num(F.soco, 1), 1, 12) + PB.soco, 1, socoMax);
+    D.soco = R.SOCO[D.socoNv];
     const kug = D.periciaCont.kugutsu || 0;
     D.marionetesMax = 1 + (kug >= 2 ? 1 : 0) + (kug >= 3 ? 1 : 0) + (kug >= 4 ? 1 : 0);
     D.elementosFixos = [].concat(cla.elementos || [], ...F.inatas.map((id) => (R.INATAS.find((h) => h.id === id) || {}).elementos || []));
@@ -290,6 +329,18 @@
       pa.innerHTML = D.avisos.map(esc).join('<br>');
     }
   }
+  function fmtBonus(b) {
+    const out = [];
+    if (b.vida) out.push(`+${b.vida} vida`);
+    if (b.chakra) out.push(`+${b.chakra} chakra`);
+    if (b.regen) out.push(`+${b.regen} regeneração`);
+    if (b.desl) out.push(`+${b.desl} deslocamento`);
+    if (b.carga) out.push(`+${b.carga * 1000} g carregamento`);
+    if (b.arremesso) out.push(`+${b.arremesso} g arremesso`);
+    if (b.soco) out.push(`+${b.soco} nível de soco`);
+    Object.entries(b.attrs || {}).forEach(([a, v]) => { if (v) out.push(`${sinal(v)} ${attrNome(a)}`); });
+    return out.join(', ');
+  }
   const fmtKg = (kg) => (Math.round(num(kg) * 100) / 100).toLocaleString('pt-BR') + ' kg';
 
   // ---------------------------------------------------------------- UI helpers
@@ -336,6 +387,7 @@
         <div class="chips">${F.inatas.map((id) => { const h = R.INATAS.find((x) => x.id === id) || { nome: id }; return `<span class="chip fixo" title="${esc(h.desc)}">${esc(h.nome)}${h.kinjutsu ? ' <span class="tag aviso">Kinjutsu</span>' : ''}<button class="x" data-acao="remInata" data-id="${id}" aria-label="Remover ${esc(h.nome)}">×</button></span>`; }).join('') || '<span class="sub">Nenhuma.</span>'}</div>
         <select id="addInata" aria-label="Adicionar habilidade inata"><option value="">+ Adicionar habilidade inata…</option>${inataOpts}</select>
       </div>
+      ${blocoPontosCriacao()}
     </section>`;
 
     const vit = painelVitalidade();
@@ -346,7 +398,7 @@
         <td class="c num">${sinal(D.claB[a.id])}</td>
         <td class="c"><input type="number" class="micro" min="0" max="5" data-k="attrs.${a.id}.pts" value="${F.attrs[a.id].pts}" aria-label="Pontos distribuídos em ${a.nome}"><div class="attr-desc"><span data-d="custo.${a.id}">${D.custo[a.id]}</span> pt</div></td>
         <td class="c num">${sinal(D.clsB[a.id])}</td>
-        <td class="c"><span class="mod${D.attr[a.id] < 0 ? ' neg' : ''}" data-d="attr.${a.id}" data-fmt="sinal">${sinal(D.attr[a.id])}</span></td>
+        <td class="c"><span class="mod${D.attr[a.id] < 0 ? ' neg' : ''}" data-d="attr.${a.id}" data-fmt="sinal"${D.periciaB.attrs[a.id] ? ` title="Inclui ${sinal(D.periciaB.attrs[a.id])} das perícias"` : ''}>${sinal(D.attr[a.id])}</span></td>
       </tr>`).join('');
 
     const atributos = `
@@ -389,12 +441,12 @@
         ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="12" class="mini"')}`)}
         ${stat('Regen. de chakra', `<span data-d="regen">${D.regen}</span>`)}
         ${stat('Percepção passiva', `<span data-d="percepcao">${D.percepcao}</span>`)}
-        ${stat('Soco', `<select data-k="soco" data-r aria-label="Nível do soco" style="width:auto">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nv ${i + 1} · ${s[1]}`, F.soco)).join('')}</select>`)}
+        <div class="stat"><span class="rotulo">Soco</span><span class="valor">${D.soco[1]} <small>Nv ${D.socoNv}</small></span><select class="stat-sel" data-k="soco" data-r aria-label="Nível base do soco">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nível base ${i + 1}`, F.soco)).join('')}</select></div>
         ${stat('Carregamento', `<span data-d="peso" data-fmt="g">${fmtKg(D.peso / 1000)}</span> / <span data-d="carga" data-fmt="kg">${fmtKg(D.carga)}</span>`)}
         ${stat('Arremesso por PA', `<span data-d="arremesso">${D.arremesso}</span> g`)}
         ${stat('Protagonismo', `<span class="linha" style="gap:6px;flex-wrap:nowrap"><button class="btn-ico" data-acao="prot" data-d2="-1" aria-label="Usar ponto de protagonismo">−</button><span><span data-v="protagonismo">${F.protagonismo}</span>/<span data-d="protMax">${D.protMax}</span></span><button class="btn-ico" data-acao="prot" data-d2="1" aria-label="Recuperar ponto de protagonismo">+</button></span>`)}
       </div>
-      <details class="item"><summary><span class="item-linha"><span class="item-nome">Bônus extras (perícias, talentos, técnicas)</span><span class="sub">editar</span></span></summary>
+      <details class="item"><summary><span class="item-linha"><span class="item-nome">Bônus extras</span></span></summary>
         <div class="item-corpo">
           <div class="campos">
             ${campo('Vida máxima', numInp('bonus.vida', F.bonus.vida))}
@@ -404,7 +456,6 @@
             ${campo('Carregamento (kg)', numInp('bonus.carga', F.bonus.carga, 'step="0.25"'))}
             ${campo('Arremesso por PA (g)', numInp('bonus.arremesso', F.bonus.arremesso, 'step="50"'))}
           </div>
-          <p class="sub">Some aqui o que vem de perícias (ex.: Resistência +15 vida, Genjutsu +25 chakra), talentos (Vida Elevada, Chakra Elevado, Veloz) e técnicas. Veja os textos em Evolução.</p>
         </div>
       </details>
     </section>`;
@@ -424,14 +475,14 @@
       <p class="sub">Testes de especialização só são usados fora de batalha. ${D.espUsadas > D.espQtd ? '<span class="tag aviso">Acima do limite do nível</span>' : ''}</p>
     </section>`;
 
-    return `<div class="grade">${identidade}${vit}${atributos}${defesas}${combate}${esp}${painelPontosCriacao()}</div>`;
+    return `<div class="grade">${identidade}${vit}${atributos}${defesas}${combate}${esp}</div>`;
   }
 
-  function painelPontosCriacao() {
+  function blocoPontosCriacao() {
     const talOpts = R.TALENTOS.filter((t) => !temTalento(t.nome)).map((t) => opt(t.nome, `${t.nome} (${t.pc} PC)`)).join('');
     return `
-    <section class="painel c12">
-      <div class="painel-topo"><h2>Pontos de Criação</h2><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
+    <div class="secao">
+      <div class="painel-topo"><h3>Pontos de Criação</h3><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
       <div class="stats">
         ${stat('Clã', D.pc.cla)}${stat('Habilidades inatas', D.pc.inatas)}${stat('Talentos', D.pc.talentos)}
       </div>
@@ -443,7 +494,7 @@
           <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
         </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
       <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
-    </section>`;
+    </div>`;
   }
 
   function painelVitalidade() {
@@ -471,7 +522,6 @@
         <div class="linha">
           <span class="trilha" aria-label="Sucessos">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="v" data-i="${i}" ${F.morte.v >= i ? 'checked' : ''} aria-label="Sucesso ${i}">`).join('')} <span class="sub">sucessos</span></span>
           <span class="trilha falha" aria-label="Falhas">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="d" data-i="${i}" ${F.morte.d >= i ? 'checked' : ''} aria-label="Falha ${i}">`).join('')} <span class="sub">falhas</span></span>
-          <button class="dado" data-acao="rolarMorte">rolar</button>
         </div>
       </div>
       <div class="pilha"><span class="rotulo">Condições</span><div class="chips">${cond}</div></div>
@@ -647,8 +697,14 @@
   // ---------------------------------------------------------------- ABA: Evolução
   function abaEvolucao() {
 
-    const slots = F.pericias.map((p, i) => campo(`Perícia ${i + 1} · nível ${NIVEIS_PERICIA[i]}${F.nivel < NIVEIS_PERICIA[i] ? ' (bloqueada)' : ''}`,
-      `<select data-k="pericias.${i}" data-r>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`)).join('');
+    const slots = F.pericias.map((p, i) => {
+      const slot = D.periciaSlots[i];
+      const sel = campo(`Perícia ${i + 1} · nível ${NIVEIS_PERICIA[i]}${F.nivel < NIVEIS_PERICIA[i] ? ' (bloqueada)' : ''}`,
+        `<select data-k="pericias.${i}" data-r>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`);
+      const escs = slot ? slot.escolhas.map((e) => `<select data-k="periciasEsc.${i}.${e.key}" data-r aria-label="Escolha da perícia ${i + 1}">${e.ops.map((o) => opt(o[0], o[1], e.sel)).join('')}</select>`).join('') : '';
+      const txt = slot ? fmtBonus(slot.b) : '';
+      return `<div class="pilha" style="gap:6px">${sel}${escs}${txt ? `<span class="sub">${slot.k}ª vez: ${txt}</span>` : ''}</div>`;
+    }).join('');
     const resumo = Object.entries(D.periciaCont).map(([id, c]) => {
       const p = R.PERICIAS.find((x) => x.id === id); if (!p) return '';
       return `<div class="item"><div class="item-corpo">
@@ -1010,14 +1066,6 @@
       const e = R.ESPECIALIZACOES.find((x) => x.id === el.dataset.id); const st = F.esp[e.id] || {};
       const at = e.attrs.includes(st.attr) ? st.attr : e.attrs[0];
       rolar(`${e.nome} (${attrCurto[at]})`, D.attr[at] + (st.on ? D.espBonus : 0));
-    },
-    rolarMorte() {
-      const d = 1 + Math.floor(Math.random() * 20); const t = d + D.attr.cons;
-      let v = 0, f = 0;
-      if (d === 20) v = 2; else if (d === 1) f = 2; else if (t >= 10) v = 1; else f = 1;
-      F.morte.v = Math.min(3, F.morte.v + v); F.morte.d = Math.min(3, F.morte.d + f);
-      toast(`Teste contra a morte: d20 (<span class="num">${d}</span>) ${D.attr.cons >= 0 ? '+' : '−'} ${Math.abs(D.attr.cons)} = <span class="num">${t}</span> · ${v ? v + ' sucesso(s)' : f + ' falha(s)'}${F.morte.v >= 3 ? ' · <b>estabilizou</b>' : ''}${F.morte.d >= 3 ? ' · <b>morreu</b>' : ''}`, 4500);
-      return true;
     },
     morte(el) { const t = el.dataset.t, i = +el.dataset.i; F.morte[t] = F.morte[t] >= i ? i - 1 : i; return true; },
     condicao(el) { const id = el.dataset.id; F.condicoes[id] = !F.condicoes[id]; return true; },

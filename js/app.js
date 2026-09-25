@@ -13,7 +13,7 @@
   const ALCANCES = ['-', 'Corpo-a-Corpo', 'Curto', 'Médio', 'Longo'];
   const AREAS = ['-', 'Pequeno', 'Grande'];
   const APRENDIZADOS = ['C', 'I', 'T', 'D'];
-  const TIPOS_JUTSU = ['Ninjutsu', 'Taijutsu', 'Kenjutsu'];
+  const TIPOS_JUTSU = ['Ninjutsu', 'Taijutsu', 'Kenjutsu', 'Genjutsu'];
   const NIVEIS_PERICIA = [4, 9, 14, 19];
   const NIVEIS_UPGRADE = [5, 10, 15, 20];
   const NIVEIS_COMPRA = [1, 2, 4, 7, 9, 12, 14, 17, 19, 20];
@@ -99,9 +99,10 @@
         const soltos = fora.filter((r) => !reqsDe(r).exato);
         if (soltos.length) j.notas = [`Requerimentos: ${soltos.join(', ')}`, j.notas].filter(Boolean).join('\n');
       }
-      if (j.tipo === undefined) j.tipo = TIPO_CAT[j.cat] || '';
+      if (!j.tipo) j.tipo = TIPO_CAT[j.cat] || '';
       estruturarDano(j);
       marcarJutsu(j);
+      limparEfeito(j);
       j.aprim = clamp(num(j.aprim), 0, 6);
       return j;
     });
@@ -156,7 +157,7 @@
       exato: !r || r === '-' || /^(corpo-a-corpo|curto|m[eé]dio|longo)?(;?\s*[aá]rea\s+(pequena|grande))?$/i.test(r),
     };
   }
-  const TIPO_CAT = { NINJUTSUS: 'Ninjutsu', TAIJUTSUS: 'Taijutsu', KENJUTSUS: 'Kenjutsu' };
+  const TIPO_CAT = { NINJUTSUS: 'Ninjutsu', TAIJUTSUS: 'Taijutsu', KENJUTSUS: 'Kenjutsu', GENJUTSUS: 'Genjutsu' };
   // Converte os campos de texto do livro para as caixas da ficha. O que não couber
   // exatamente nas opções fica registrado em "Anotações" como "No livro: …".
   function estruturarJutsu(j) {
@@ -196,10 +197,10 @@
     return j;
   }
   const fmtDano = (j) => (j.danoTipo === 'd' ? `${j.danoQtd || ''}d${j.danoFaces || ''}` : '—');
-  const jutsuDoCatalogo = (j) => marcarJutsu(estruturarDano(estruturarJutsu({
+  const jutsuDoCatalogo = (j) => limparEfeito(marcarJutsu(estruturarDano(estruturarJutsu({
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
-  })));
+  }))));
   // Texto de requerimento do livro -> opções da caixa (elementos, habilidades inatas, clãs, portões).
   // exato = tudo o que estava escrito virou opção; se não, o texto original vai para as anotações.
   function reqsDe(texto) {
@@ -242,6 +243,14 @@
   const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}${j.porTurno ? '/turno' : ''}`);
   // Marcações que o livro põe no começo do Efeito ("Defesa.", "Defesa Extra.", "Concentração.", "Estilo de Luta.")
   const MARCAS = [['defesa', 'Defesa'], ['defesaExtra', 'Defesa Extra'], ['concentracao', 'Concentração'], ['estilo', 'Estilo de Luta']];
+  // Tira do começo do Efeito as marcações que agora são caixas ("Defesa.", "Concentração." etc.)
+  function limparEfeito(j) {
+    let t = String(j.efeito || '');
+    const re = /^\s*(defesa extra|defesa|concentra[çc][aã]o|estilo de luta)\s*\.\s*/i;
+    while (re.test(t)) t = t.replace(re, '');
+    j.efeito = t;
+    return j;
+  }
   function marcarJutsu(j) {
     if (j.defesa !== undefined) return j;
     const inicio = String(j.efeito || '').split('.').slice(0, 3).map((x) => x.trim().toLowerCase());
@@ -509,7 +518,7 @@
   const eDefesa = (j) => j.defesa || j.defesaExtra;
   const FILTRO_DN = {
     nin: (j) => eDefesa(j) && j.tipo === 'Ninjutsu',
-    gen: (j) => eDefesa(j) && j.cat === 'GENJUTSUS',
+    gen: (j) => eDefesa(j) && j.tipo === 'Genjutsu',
     contra: (j) => !eDefesa(j),
   };
   const tecnicaDN = (k, val, filtro) => {

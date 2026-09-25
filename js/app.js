@@ -89,7 +89,14 @@
       out.bonus.chakra = Math.max(0, num(out.bonus.chakra) - 10);
       out.bonus.regen = Math.max(0, num(out.bonus.regen) - 5);
     }
-    out.jutsus = out.jutsus.map((j) => { estruturarJutsu(j); if (!Array.isArray(j.reqs)) j.reqs = reqsDe(j.req); return j; });
+    out.jutsus = out.jutsus.map((j) => {
+      estruturarJutsu(j);
+      if (!Array.isArray(j.reqs)) j.reqs = reqsDe(j.req);
+      j.reqs = [...new Set(j.reqs.flatMap((r) => (GRUPO_REQ[r] ? [r] : reqsDe(r))))];
+      estruturarDano(j);
+      j.aprim = clamp(num(j.aprim), 0, 6);
+      return j;
+    });
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
@@ -151,10 +158,25 @@
       notas: [nota, txt(j.notas)].filter(Boolean).join('\n'),
     });
   }
-  const jutsuDoCatalogo = (j) => estruturarJutsu({
+  // Dano do livro -> "-" ou quantidade "d" faces. Texto que não couber vai para "No livro: …".
+  function estruturarDano(j) {
+    if (j.danoTipo) return j;
+    const t = String(j.dano == null ? '' : j.dano).trim();
+    const m = t.match(/(\d+)\s*d\s*(\d+)/i);
+    j.danoTipo = m ? 'd' : '-';
+    j.danoQtd = m ? m[1] : '';
+    j.danoFaces = m ? m[2] : '';
+    if (t && !/^-+$/.test(t) && !/^\d+\s*d\s*\d+$/i.test(t)) {
+      const nota = `No livro: Dano ${t.replace(/\s+/g, ' ')}`;
+      j.notas = /^No livro: /.test(j.notas || '') ? j.notas.replace(/^(No livro: [^\n]*)/, `$1 · Dano ${t.replace(/\s+/g, ' ')}`) : [nota, j.notas].filter(Boolean).join('\n');
+    }
+    return j;
+  }
+  const fmtDano = (j) => (j.danoTipo === 'd' ? `${j.danoQtd || ''}d${j.danoFaces || ''}` : '—');
+  const jutsuDoCatalogo = (j) => estruturarDano(estruturarJutsu({
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
-  });
+  }));
   // Texto de requerimento do livro -> opções normalizadas (o que não casar fica como está)
   function reqsDe(texto) {
     const out = [];
@@ -171,6 +193,10 @@
   const GRUPO_REQ = {};
   R.REQUERIMENTOS.forEach(([g, n]) => { GRUPO_REQ[n] = g; });
   CAT_J.forEach((j) => { j.reqs = reqsDe(j.req); });
+  // opções da caixa: apenas os requerimentos que aparecem em alguma técnica do documento
+  const NO_DOC = new Set(CAT_J.flatMap((j) => j.reqs));
+  const OPCOES_REQ = R.REQUERIMENTOS.filter(([, n]) => NO_DOC.has(n)).map(([g, n]) => [g, n])
+    .concat([...NO_DOC].filter((n) => !GRUPO_REQ[n]).map((n) => ['Outros', n]));
   const ELEM_CAT = { KATON: 'katon', SUITON: 'suiton', FUUTON: 'fuuton', RAITON: 'raiton', DOTON: 'doton' };
   const ELEM_RE = {
     katon: /\bkaton\b|estilo do fogo|libera[çc][aã]o de fogo/i, suiton: /\bsuiton\b|libera[çc][aã]o de [aá]gua/i,
@@ -420,6 +446,10 @@
   const area = (k, val, extra = '') => `<textarea data-k="${k}" ${extra}>${esc(val)}</textarea>`;
   // caixa de seleção; se o valor salvo não estiver entre as opções, mostra "—" até o usuário escolher
   const selecao = (k, ops, val) => `<select data-k="${k}" data-r>${ops.includes(val) ? '' : opt('', '—', '')}${ops.map((o) => opt(o, o, val)).join('')}</select>`;
+  const tecnicaDN = (k, val) => {
+    const nomes = [...new Set(F.jutsus.map((j) => j.n).filter(Boolean))];
+    return `<select data-k="${k}">${opt('', '—', nomes.includes(val) ? val : '')}${nomes.map((n) => opt(n, n, val)).join('')}</select>`;
+  };
   const campo = (rot, html) => `<label class="campo"><span>${rot}</span>${html}</label>`;
   const stat = (rot, valorHtml, det = '') => `<div class="stat"><span class="rotulo">${rot}</span><span class="valor">${valorHtml}</span>${det ? `<span class="det">${det}</span>` : ''}</div>`;
 
@@ -498,9 +528,9 @@
         ${dnCard('contra', 'Contra-ataque', `4 + <select data-k="dn.contraAttr" data-r aria-label="Atributo do contra-ataque" style="width:auto;padding:1px 4px">${R.ATRIBUTOS.map((a) => opt(a.id, attrCurto[a.id], F.dn.contraAttr)).join('')}</select>`)}
       </div>
       <div class="campos">
-        ${campo('Técnica na DN de Ninjutsu', inp('dn.nin', F.dn.nin, 'placeholder="Ex.: Kawarimi no Jutsu"'))}
-        ${campo('Técnica na DN de Genjutsu', inp('dn.gen', F.dn.gen))}
-        ${campo('Técnica de contra-ataque', inp('dn.contra', F.dn.contra))}
+        ${campo('Técnica na DN de Ninjutsu', tecnicaDN('dn.nin', F.dn.nin))}
+        ${campo('Técnica na DN de Genjutsu', tecnicaDN('dn.gen', F.dn.gen))}
+        ${campo('Técnica de contra-ataque', tecnicaDN('dn.contra', F.dn.contra))}
         ${campo('Bônus em todas as DN', numInp('bonus.dn', F.bonus.dn))}
       </div>
     </section>`;
@@ -542,7 +572,7 @@
         return `<input type="checkbox" id="esp-${e.id}" data-k="esp.${e.id}.on" data-r ${st.on ? 'checked' : ''}>
           <label for="esp-${e.id}" class="esp-n" title="${esc(e.desc)}">${e.nome}</label>
           <span class="esp-sel">${e.attrs.length > 1 ? `<select data-k="esp.${e.id}.attr" data-r aria-label="Atributo de ${e.nome}">${e.attrs.map((a) => opt(a, attrCurto[a], at)).join('')}</select>` : `<span class="tag">${attrCurto[at]}</span>`}</span>
-          <button class="dado esp-t" data-acao="rolarEsp" data-id="${e.id}" aria-label="Rolar ${e.nome}">${sinal(tot)}</button>`;
+          <span class="esp-t">${sinal(tot)}</span>`;
       }).join('')}</div>
       <p class="sub">Testes de especialização só são usados fora de batalha. ${D.espUsadas > D.espQtd ? '<span class="tag aviso">Acima do limite do nível</span>' : ''}</p>
     </section>`;
@@ -616,7 +646,7 @@
   function caixaReqs(j, i) {
     const reqs = j.reqs || [];
     const grupos = {};
-    R.REQUERIMENTOS.forEach(([g, n]) => { if (!reqs.includes(n)) (grupos[g] = grupos[g] || []).push(n); });
+    OPCOES_REQ.forEach(([g, n]) => { if (!reqs.includes(n)) (grupos[g] = grupos[g] || []).push(n); });
     return `<div class="campo campo-largo"><span>Requerimentos</span><div class="multi">
       ${reqs.map((r, ri) => `<span class="chip fixo">${esc(r)}<button class="x" data-acao="remReq" data-i="${i}" data-ri="${ri}" aria-label="Remover ${esc(r)}">×</button></span>`).join('')}
       <select class="addReq" data-i="${i}" aria-label="Adicionar requerimento"><option value="">${reqs.length ? '+ Adicionar requerimento' : 'Nenhum · escolha para adicionar'}</option>${Object.entries(grupos).map(([g, ns]) => `<optgroup label="${esc(g)}">${ns.map((n) => opt(n, n)).join('')}</optgroup>`).join('')}</select>
@@ -625,10 +655,11 @@
 
   function cartaoJutsu(j, i) {
     const k = (f) => `jutsus.${i}.${f}`;
-    return `<details class="item">
+    if (!j.id) j.id = uid();
+    return `<details class="item" data-id="${esc(j.id)}">
       <summary>
-        <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${num(j.aprim) ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
-        <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(j.dano) || '—'}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
+        <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
+        <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(fmtDano(j))}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
       </summary>
       <div class="item-corpo">
         <div class="campos">
@@ -641,10 +672,14 @@
           <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
           ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
           ${campo('Área', selecao(k('area'), AREAS, j.area))}
-          ${campo('Dano', inp(k('dano'), j.dano))}
+          <div class="campo"><span>Dano</span><div class="linha" style="gap:4px;flex-wrap:nowrap">
+            ${j.danoTipo === 'd' ? `<input data-k="${k('danoQtd')}" class="mini so-digitos" inputmode="numeric" value="${esc(j.danoQtd)}" aria-label="Quantidade de dados">` : ''}
+            <select data-k="${k('danoTipo')}" data-r aria-label="Tipo de dano" style="width:auto">${opt('-', '-', j.danoTipo)}${opt('d', 'd', j.danoTipo)}</select>
+            ${j.danoTipo === 'd' ? `<input data-k="${k('danoFaces')}" class="mini so-digitos" inputmode="numeric" value="${esc(j.danoFaces)}" aria-label="Faces do dado">` : ''}
+          </div></div>
           ${campo('Aprendizado', selecao(k('apr'), APRENDIZADOS, j.apr))}
           ${caixaReqs(j, i)}
-          <label class="campo-linha"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="5" class="mini"')}</label>
+          ${j.rank === 'S' ? '' : `<div class="campo-linha"><label class="linha" style="gap:10px"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="6" class="mini" data-r')}</label>${num(j.aprim) >= 6 && j.rank ? `<button class="btn peq primario" data-acao="upar" data-i="${i}">Upar</button>` : ''}</div>`}
         </div>
         ${campo('Efeito', area(k('efeito'), j.efeito, 'rows="4"'))}
         ${campo('Anotações', area(k('notas'), j.notas, 'rows="2" placeholder="Aprimoramentos feitos, combinações, etc."'))}
@@ -1066,10 +1101,13 @@
     garantirAtuais();
     const y = window.scrollY;
     const antes = $$('#conteudo details').map((d) => d.open);
+    const abertosId = new Set($$('#conteudo details[data-id][open]').map((d) => d.dataset.id));
     $('#conteudo').innerHTML = (ABAS[aba] || abaFicha)();
     const todos = $$('#conteudo details');
     if (todos.length === antes.length) todos.forEach((d, i) => { d.open = antes[i]; });
     else antes.forEach((o, i) => { if (o && todos[i] && todos[i].classList.contains('item')) todos[i].open = true; });
+    // cartões com id (jutsus) lembram o estado pelo próprio id, mesmo se a lista for reordenada
+    todos.forEach((d) => { if (d.dataset.id) d.open = abertosId.has(d.dataset.id); });
     atualizarDerivados();
     window.scrollTo(0, y);
   }
@@ -1098,13 +1136,6 @@
     t.innerHTML = html; t.hidden = false;
     clearTimeout(tToast); tToast = setTimeout(() => { t.hidden = true; }, ms);
   }
-  function rolar(rot, mod) {
-    const d = 1 + Math.floor(Math.random() * 20);
-    const tot = d + mod;
-    const extra = d === 20 ? ' <span class="crit">20 natural!</span>' : d === 1 ? ' <span class="crit">1 natural</span>' : '';
-    toast(`${esc(rot)}: d20 (<span class="num">${d}</span>) ${mod >= 0 ? '+' : '−'} ${Math.abs(mod)} = <span class="num">${tot}</span>${extra}`);
-  }
-
   // ---------------------------------------------------------------- fichas
   function modalFichas() {
     const ids = Object.keys(db.fichas);
@@ -1160,11 +1191,6 @@
     remInata(el) { F.inatas = F.inatas.filter((x) => x !== el.dataset.id); return true; },
     remTalento(el) { F.talentos.splice(+el.dataset.i, 1); return true; },
     remTalPer(el) { F.talentosPericia.splice(+el.dataset.i, 1); return true; },
-    rolarEsp(el) {
-      const e = R.ESPECIALIZACOES.find((x) => x.id === el.dataset.id); const st = F.esp[e.id] || {};
-      const at = e.attrs.includes(st.attr) ? st.attr : e.attrs[0];
-      rolar(`${e.nome} (${attrCurto[at]})`, D.attr[at] + (st.on ? D.espBonus : 0));
-    },
     morte(el) { const t = el.dataset.t, i = +el.dataset.i; F.morte[t] = F.morte[t] >= i ? i - 1 : i; return true; },
     condicao(el) { const id = el.dataset.id; F.condicoes[id] = !F.condicoes[id]; return true; },
     prot(el) { F.protagonismo = clamp(num(F.protagonismo) + Number(el.dataset.d2), 0, D.protMax); },
@@ -1210,7 +1236,7 @@
       if (aba === 'jutsus') render();
     },
     novaTecnica() {
-      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', dano: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
+      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', danoTipo: '-', danoQtd: '', danoFaces: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
       ui.jq = ''; ui.jrank = '';
       render();
       const d = $$('#listaJutsus details'); const alvo = d.find((x) => x.querySelector('.item-nome').textContent === 'Nova técnica');
@@ -1222,6 +1248,14 @@
       const novos = CAT_J.filter((j) => gruposMeus().includes(j.grp) && /^I\b/.test(String(j.apr).trim()) && !tem.has(j.n));
       novos.forEach((j) => F.jutsus.push(jutsuDoCatalogo(j)));
       toast(novos.length ? `${novos.length} técnica(s) inicial(is) adicionada(s).` : 'As técnicas iniciais já estão na ficha.');
+      return true;
+    },
+    upar(el) {
+      const j = F.jutsus[+el.dataset.i];
+      const idx = RANKS_JUTSU.indexOf(j.rank);
+      if (idx < 0 || idx >= RANKS_JUTSU.length - 1) return;
+      j.rank = RANKS_JUTSU[idx + 1]; j.aprim = 0;
+      toast(`${esc(j.n)} subiu para o rank ${j.rank}.`);
       return true;
     },
     remReq(el) { F.jutsus[+el.dataset.i].reqs.splice(+el.dataset.ri, 1); return true; },
@@ -1290,6 +1324,7 @@
     else if (el.type === 'number') v = el.value === '' ? 0 : Number(el.value);
     else v = el.value;
     if (k === 'nivel') v = clamp(num(v, 1), 1, 20);
+    if (/^jutsus\.\d+\.aprim$/.test(k)) { v = clamp(num(v), 0, 6); el.value = v; }
     setPath(F, k, v);
     salvar();
     return el.hasAttribute('data-r');
@@ -1302,6 +1337,7 @@
     if (el.id === 'lojaQ') { ui.loja.q = el.value; renderLoja(); return; }
     if (!el.dataset || !el.dataset.k) return;
     if (el.tagName === 'SELECT' || el.type === 'checkbox') return; // tratados em change
+    if (el.classList.contains('so-digitos') && /\D/.test(el.value)) el.value = el.value.replace(/\D/g, '');
     const re = aplicarCampo(el);
     if (re && el.type !== 'number') render(); else atualizarDerivados();
   });

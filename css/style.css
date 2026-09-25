@@ -217,6 +217,7 @@ p { margin: 0; }
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .campo { display: grid; gap: 4px; min-width: 0; }
 .campo-largo { grid-column: 1 / -1; }
+.campo-linha label > span { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
 .multi {
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px;
@@ -349,7 +350,7 @@ input[type="search"] { width: 100%; background: var(--surface-2); border: 1px so
 .esp input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); }
 .esp .esp-n { font-weight: 500; }
 .esp select { width: auto; padding: 3px 6px; font-size: .8rem; }
-.esp .esp-t { font-family: var(--f-mono); font-weight: 700; min-width: 34px; text-align: right; }
+.esp .esp-t { font-family: var(--f-mono); font-weight: 700; min-width: 34px; text-align: right; padding-right: 4px; }
 
 /* Medidor */
 .medidor { height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }

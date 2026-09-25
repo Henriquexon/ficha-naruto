@@ -467,25 +467,21 @@ window.REGRAS = (function () {
   // opções com "ou" (alternativas) vêm primeiro para não virarem dois requisitos
   req('Técnica', 'Kage Bunshin no Jutsu ou Tajū Kage Bunshin no Jutsu', /kage bunshin.* ou .*taj/i);
   req('Perícia', 'Segunda Perícia de Taijutsu ou Ninjutsu', /segunda per[ií]cia/i);
-  req('Doujutsu e estados', 'Rinne Sharingan Vermelho ou Roxo', /vermelho ou/i);
+  req('Doujutsu e estados', 'Rinne Sharingan Vermelho ou Rinne Sharingan Roxo', /vermelho ou/i);
   [['Aburame: Kikaichū', /kikaich/i], ['Aburame: Rinkaichu', /rinkaich/i], ['Akimichi', /akimichi/i], ['Hoozuki', /hoozuki/i],
     ['Hyuuga', /hyuuga/i], ['Inuzuka', /^(cl[aã]\s+)?inuzuka$/i], ['Nara', /^(cl[aã]\s+)?nara$/i], ['Sarutobi', /sarutobi/i],
     ['Senju', /senju/i], ['Uchiha', /uchiha/i], ['Uzumaki', /uzumaki/i], ['Yamanaka', /yamanaka/i]]
     .forEach(([n, re]) => req('Clã', 'Clã ' + n, re));
-  [['Aojorou', /aojorou/i], ['Bakuton I', /bakuton\s*i\b(?!i)/i], ['Bakuton II (Kibaku Nendo)', /kibaku\s*nendo|bakuton\s*ii/i],
-    ['Choujuu Giga', /choujuu/i], ['Hyouton', /hyouton/i], ['Jinton', /jinton/i], ['Jiton', /jiton/i], ['Kami', /\bkami\b/i],
-    ['Mokuton', /mokuton kekkei|^mokuton$/i], ['Punhos Bêbados', /punhos/i], ['Roubo de Chakra', /roubo de chakra/i],
-    ['Senninka', /senninka/i], ['Sensorial', /sensorial$/i], ['Shakuton', /shakuton/i],
-    ['Siameses', /siames/i], ['Tubarão', /tubar[aã]o/i], ['Tubos de Ar', /tubos de ar/i]]
-    .forEach(([n, re]) => req('Habilidade inata', 'Habilidade Inata ' + n, re));
-  INATAS.forEach((h) => {
-    const curto = h.nome.replace(/\s*\(.*\)$/, '');
-    if (!REQUERIMENTOS.some(([g, n]) => g === 'Habilidade inata' && n.startsWith('Habilidade Inata ' + curto.split(' ')[0]))
-      && !/jashin|jiongu/i.test(curto)) req('Habilidade inata', 'Habilidade Inata ' + curto, new RegExp('^(habilidade inata\\s+)?' + curto + '$', 'i'));
-  });
+  // nomes como aparecem no documento de Jutsus
+  [['Aojorou Kekkei Genkai', /aojorou/i], ['Bakuton I Kekkei Genkai', /bakuton\s*i\b(?!i)/i], ['Kekkei Genkai Kibaku Nendo', /kibaku\s*nendo|bakuton\s*ii/i],
+    ['Habilidade Inata Choujuu Giga', /choujuu/i], ['Habilidade Inata Hyouton', /hyouton/i], ['Habilidade Inata Jinton', /jinton/i],
+    ['Habilidade Inata Kami', /\bkami\b/i], ['Mokuton Kekkei Genkai', /mokuton kekkei|^mokuton$/i], ['Habilidade Inata Punhos Bêbados', /punhos/i],
+    ['Habilidade Inata Roubo de Chakra', /roubo de chakra/i], ['Habilidade Inata Senninka', /senninka/i], ['Habilidade Inata Sensorial', /sensorial$/i],
+    ['Habilidade Inata Shakuton', /shakuton/i], ['Habilidade Siameses', /siames/i], ['Habilidade Inata Tubarão', /tubar[aã]o/i], ['Habilidade Tubos de Ar', /tubos de ar/i]]
+    .forEach(([n, re]) => req('Habilidade inata', n, re));
   req('Kinjutsu', 'Kinjutsu Jashin', /jashin/i);
   req('Kinjutsu', 'Kinjutsu Jiongu', /^(kinjutsu\s+)?jiongu$/i);
-  req('Kinjutsu', 'Perícia Jiongu nível 3', /per[ií]cia jiongu/i);
+  req('Kinjutsu', 'Perícia Jiongu Nível 3', /per[ií]cia jiongu/i);
   [['Katon', 'katon'], ['Suiton', 'suiton'], ['Fuuton', 'f[uū]u?ton'], ['Raiton', 'raiton'], ['Doton', 'doton']].forEach(([n, r]) => {
     req('Kinjutsu', 'Máscara de ' + n, new RegExp('m[aá]scara de ' + r, 'i'));
   });
@@ -501,14 +497,14 @@ window.REGRAS = (function () {
   req('Doujutsu e estados', 'Rinne Sharingan Roxo', /^rinne sharingan roxo$/i);
   req('Doujutsu e estados', 'Selo Amaldiçoado', /selo amaldi/i);
   req('Doujutsu e estados', 'Ser um Jinchuuriki', /ser um jinchuuriki/i);
-  req('Doujutsu e estados', 'Selo entre Jinchuuriki e Bijuu enfraquecido', /selo que une/i);
+  req('Doujutsu e estados', 'Selo que une Jinchuuriki e Bijuu deve estar enfraquecido', /selo que une/i);
   ['Sapos', 'Cobras', 'Lesmas', 'Doki'].forEach((n) => req('Invocação', 'Pacto com ' + n, new RegExp('pacto com ' + n, 'i')));
   req('Invocação', 'Pacto com um animal de rank B', /animal de rank b/i);
   req('Invocação', 'Pacto com um animal de rank A', /animal de rank a/i);
   req('Invocação', 'Kuchiyose - Doki', /kuchiyose - doki/i);
-  [['Ninjutsu', 'ninjutsu'], ['Genjutsu', 'genjutsu'], ['Taijutsu', 'taijutsu'], ['Uso de Armas', 'armas'], ['Kugutsu', 'kugutsu'],
-    ['Resistência', 'resist'], ['Medicina', 'medic'], ['Fuuinjutsu', 'fuuinjutsu']].forEach(([n, k]) => {
-    [1, 2, 3, 4].forEach((lv) => req('Perícia', `Perícia em ${n} nível ${lv}`,
+  [['Perícia de Ninjutsu', 'ninjutsu'], ['Perícia de Genjutsu', 'genjutsu'], ['Perícia de Taijutsu', 'taijutsu'], ['Perícia em Armas', 'armas'],
+    ['Perícia em Kugutsu', 'kugutsu'], ['Perícia em Resistência', 'resist'], ['Perícia Medicinal', 'medic'], ['Perícia em Fuuinjutsu', 'fuuinjutsu']].forEach(([n, k]) => {
+    [1, 2, 3, 4].forEach((lv) => req('Perícia', `${n} nível ${lv}`,
       new RegExp(`per[ií]cia[^/]*${k}[^/]*n[ií]vel\\s*${lv}|per[ií]cia\\s+n[ií]vel\\s*${lv}[^/]*${k}`, 'i')));
   });
   for (let i = 1; i <= 8; i++) req('Portões', `${i}º Portão`, new RegExp(`^${i}º port`, 'i'));
@@ -521,13 +517,13 @@ window.REGRAS = (function () {
     ['Transformação cão gigante ativada', /c[aã]o gigante/i], ['Suika no Jutsu', /suika/i], ['Shikigami no Mai', /shikigami/i],
     ['Kumo Nenkin (Ouro Pegajoso da Aranha)', /kumo nenkin/i], ['C2', /^c2$/i], ['Raiton Chakura Mōdo', /raiton chakura/i],
     ['Arte Sábia da Liberação de Madeira', /arte s[aá]bia/i], ['Mokuton Bunshin no Jutsu', /mokuton bunshin/i],
-    ['Genbusō Kyoku', /genbus/i], ['Técnica Jichinsai ativa', /jichinsai/i], ['Ataque de Combinação Mortal', /combina[cç][aã]o mortal/i]]
+    ['Genbusō Kyoku', /genbus/i], ['Técnica Jichinsai Ativa', /jichinsai/i], ['Ataque de Combinação Mortal', /combina[cç][aã]o mortal/i]]
     .forEach(([n, re]) => req('Técnica', n, re));
   [['Selos com as duas mãos', /selos com (as )?duas m/i], ['Juntar as mãos', /juntar as m/i], ['Alvo parado', /alvo parado/i],
-    ['Água ao redor', /[aá]gua/i], ['Nuvens carregadas', /nuvens/i], ['Caverna', /caverna/i], ['Superfície sólida', /superf[ií]cie/i],
-    ['Solo', /^solo$/i], ['Um sacrifício humano vivo', /sacrif[ií]cio/i], ['Óleo na composição corporal', /[oó]leo/i],
-    ['Rolo de pano', /rolo de pano/i], ['Gunbai', /gunbai/i], ['Argila', /argila/i], ['Cão e dono', /c[aã]o e dono/i],
-    ['Local para o teleporte estabelecido', /teleporte/i], ['Carregar chakra natural parado (15 PA, desvantagem na defesa)', /chakra natural|desvantagem na defesa/i]]
+    ['Água ao redor', /[aá]gua/i], ['Nuvens Carregadas', /nuvens/i], ['Caverna', /caverna/i], ['Superfície Sólida', /superf[ií]cie/i],
+    ['Solo', /^solo$/i], ['Um sacrifício humano vivo', /sacrif[ií]cio/i], ['Óleo na sua composição corporal', /[oó]leo/i],
+    ['Rolo de Pano', /rolo de pano/i], ['Gunbai', /gunbai/i], ['Argila', /argila/i], ['Cão e dono', /c[aã]o e dono/i],
+    ['Estabelecer um local para o teleporte', /teleporte/i], ['Passar 15 PA parado carregando chakra natural, possuindo desvantagem na defesa', /chakra natural|desvantagem na defesa/i]]
     .forEach(([n, re]) => req('Condição', n, re));
 
   return {

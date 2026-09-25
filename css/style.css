@@ -217,6 +217,18 @@ p { margin: 0; }
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .campo { display: grid; gap: 4px; min-width: 0; }
 .campo-largo { grid-column: 1 / -1; }
+/* caixa composta: vários controles com aparência de um só campo */
+.combo {
+  display: inline-flex; align-items: stretch; max-width: 100%; width: fit-content;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; overflow: hidden;
+}
+.combo:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.campo .combo > input, .campo .combo > select { border: 0; border-radius: 0; background: transparent; box-shadow: none; flex: none; }
+.campo .combo > input { width: 3.2em; text-align: center; padding: 7px 4px; font-family: var(--f-mono); }
+.campo .combo > select { width: auto; min-width: 3.4em; padding: 7px 22px 7px 10px; border-inline: 1px solid var(--line); }
+.campo .combo > select:only-child { border-inline: 0; }
+/* listas abertas das caixas de seleção com fundo e letra contrastantes */
+option, optgroup { background-color: var(--surface); color: var(--ink); }
 .campo-linha label > span { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
 .multi {
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;

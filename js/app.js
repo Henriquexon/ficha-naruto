@@ -13,6 +13,7 @@
   const ALCANCES = ['-', 'Corpo-a-Corpo', 'Curto', 'Médio', 'Longo'];
   const AREAS = ['-', 'Pequeno', 'Grande'];
   const APRENDIZADOS = ['C', 'I', 'T', 'D'];
+  const TIPOS_JUTSU = ['Ninjutsu', 'Taijutsu', 'Kenjutsu'];
   const NIVEIS_PERICIA = [4, 9, 14, 19];
   const NIVEIS_UPGRADE = [5, 10, 15, 20];
   const NIVEIS_COMPRA = [1, 2, 4, 7, 9, 12, 14, 17, 19, 20];
@@ -91,12 +92,19 @@
     }
     out.jutsus = out.jutsus.map((j) => {
       estruturarJutsu(j);
-      if (!Array.isArray(j.reqs)) j.reqs = reqsDe(j.req);
-      j.reqs = [...new Set(j.reqs.flatMap((r) => (GRUPO_REQ[r] ? [r] : reqsDe(r))))];
+      if (!Array.isArray(j.reqs)) j.reqs = reqsDe(j.req).reqs;
+      const fora = j.reqs.filter((r) => !GRUPO_REQ[r]);
+      if (fora.length) {
+        j.reqs = [...new Set(j.reqs.flatMap((r) => (GRUPO_REQ[r] ? [r] : reqsDe(r).reqs)))];
+        const soltos = fora.filter((r) => !reqsDe(r).exato);
+        if (soltos.length) j.notas = [`Requerimentos: ${soltos.join(', ')}`, j.notas].filter(Boolean).join('\n');
+      }
+      if (j.tipo === undefined) j.tipo = TIPO_CAT[j.cat] || '';
       estruturarDano(j);
       j.aprim = clamp(num(j.aprim), 0, 6);
       return j;
     });
+    out.itens = out.itens.map(estruturarItem);
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
@@ -131,6 +139,22 @@
     return f;
   }
 
+  // Acrescenta um trecho à linha "No livro: …" das anotações (ou cria a linha)
+  function notaLivro(o, trecho) {
+    const t = String(trecho).replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    o.notas = /^No livro: /.test(o.notas || '') ? o.notas.replace(/^(No livro: [^\n]*)/, `$1 · ${t}`) : [`No livro: ${t}`, o.notas].filter(Boolean).join('\n');
+  }
+  // Texto de alcance do livro -> opções de Range e Área
+  function alcanceDe(texto) {
+    const r = String(texto || '').trim().toLowerCase();
+    return {
+      alcance: /corpo/.test(r) ? 'Corpo-a-Corpo' : /curt/.test(r) ? 'Curto' : /m[eé]di/.test(r) ? 'Médio' : /long/.test(r) ? 'Longo' : '-',
+      area: /pequen/.test(r) ? 'Pequeno' : /grande/.test(r) ? 'Grande' : '-',
+      exato: !r || r === '-' || /^(corpo-a-corpo|curto|m[eé]dio|longo)?(;?\s*[aá]rea\s+(pequena|grande))?$/i.test(r),
+    };
+  }
+  const TIPO_CAT = { NINJUTSUS: 'Ninjutsu', TAIJUTSUS: 'Taijutsu', KENJUTSUS: 'Kenjutsu' };
   // Converte os campos de texto do livro para as caixas da ficha. O que não couber
   // exatamente nas opções fica registrado em "Anotações" como "No livro: …".
   function estruturarJutsu(j) {
@@ -143,17 +167,17 @@
     let tipo = /vida|\bpv\b/i.test(c) && !/chakra/i.test(c) ? 'vida' : /chakra/i.test(c) ? 'chakra' : (nC ? 'chakra' : '-');
     if (!c || /^-+$/.test(c)) tipo = '-';
     if (c && !/^-+$/.test(c) && !/^\d+\s*(de\s+)?(chakra|vida)$/i.test(c)) livro.push(`Custo ${c}`);
-    const r = txt(j.range).toLowerCase();
-    const alcance = /corpo/.test(r) ? 'Corpo-a-Corpo' : /curt/.test(r) ? 'Curto' : /m[eé]di/.test(r) ? 'Médio' : /long/.test(r) ? 'Longo' : '-';
-    const area = /pequen/.test(r) ? 'Pequeno' : /grande/.test(r) ? 'Grande' : '-';
-    if (r && r !== '-' && !/^(corpo-a-corpo|curto|m[eé]dio|longo)?(;?\s*[aá]rea\s+(pequena|grande))?$/i.test(r)) livro.push(`Range ${txt(j.range)}`);
+    const { alcance, area, exato } = alcanceDe(j.range);
+    if (!exato) livro.push(`Range ${txt(j.range)}`);
+    const rq = reqsDe(j.req);
+    if (!rq.exato) livro.push(`Requerimentos ${txt(j.req)}`);
     const p = txt(j.pa); const nP = p.match(/\d+/);
     if (p && p !== '-' && !/^\d+\s*PA$/i.test(p)) livro.push(`Custo de Ações ${p}`);
     const a = txt(j.apr); const ap = (a.match(/^[CITD]\b/i) || [''])[0].toUpperCase();
     if (a && a !== '-' && a.toUpperCase() !== ap) livro.push(`Aprendizado ${a.replace(/\s+/g, ' ')}`);
     const nota = livro.length ? `No livro: ${livro.join(' · ')}` : '';
     return Object.assign(j, {
-      v: 2, reqs: Array.isArray(j.reqs) ? j.reqs : reqsDe(j.req), rank: letra === '—' ? '' : letra, custoTipo: tipo, custoQtd: tipo === '-' ? 0 : (nC ? Number(nC[0]) : 0),
+      v: 2, reqs: rq.reqs, tipo: TIPO_CAT[j.cat] || '', rank: letra === '—' ? '' : letra, custoTipo: tipo, custoQtd: tipo === '-' ? 0 : (nC ? Number(nC[0]) : 0),
       paQtd: nP ? Number(nP[0]) : 0, range: alcance, area, apr: ap,
       notas: [nota, txt(j.notas)].filter(Boolean).join('\n'),
     });
@@ -166,10 +190,7 @@
     j.danoTipo = m ? 'd' : '-';
     j.danoQtd = m ? m[1] : '';
     j.danoFaces = m ? m[2] : '';
-    if (t && !/^-+$/.test(t) && !/^\d+\s*d\s*\d+$/i.test(t)) {
-      const nota = `No livro: Dano ${t.replace(/\s+/g, ' ')}`;
-      j.notas = /^No livro: /.test(j.notas || '') ? j.notas.replace(/^(No livro: [^\n]*)/, `$1 · Dano ${t.replace(/\s+/g, ' ')}`) : [nota, j.notas].filter(Boolean).join('\n');
-    }
+    if (t && !/^-+$/.test(t) && !/^\d+\s*d\s*\d+$/i.test(t)) notaLivro(j, `Dano ${t}`);
     return j;
   }
   const fmtDano = (j) => (j.danoTipo === 'd' ? `${j.danoQtd || ''}d${j.danoFaces || ''}` : '—');
@@ -177,26 +198,21 @@
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
   }));
-  // Texto de requerimento do livro -> opções normalizadas (o que não casar fica como está)
+  // Texto de requerimento do livro -> opções da caixa (elementos, habilidades inatas, clãs, portões).
+  // exato = tudo o que estava escrito virou opção; se não, o texto original vai para as anotações.
   function reqsDe(texto) {
-    const out = [];
+    const reqs = []; let exato = true;
     String(texto || '').split(/[;/,\n]/).map((x) => x.trim().replace(/\.+$/, '').trim())
       .filter((x) => x && !/^-+$/.test(x)).forEach((seg) => {
-        const ou = / ou /i.test(seg);
-        const achou = R.REQUERIMENTOS.filter(([, n, re]) => (!ou || / ou /.test(n)) && re.test(seg));
-        if (ou) { out.push(achou.length ? achou[0][1] : seg); return; }
-        if (achou.length) achou.forEach(([, n]) => { if (!out.includes(n)) out.push(n); });
-        else if (!out.includes(seg)) out.push(seg);
+        const achou = / ou /i.test(seg) ? [] : R.REQUERIMENTOS.filter(([, , re]) => re.test(seg));
+        if (!achou.length || / e /i.test(seg)) exato = false;
+        achou.forEach(([, n]) => { if (!reqs.includes(n)) reqs.push(n); });
       });
-    return out;
+    return { reqs, exato };
   }
   const GRUPO_REQ = {};
   R.REQUERIMENTOS.forEach(([g, n]) => { GRUPO_REQ[n] = g; });
-  CAT_J.forEach((j) => { j.reqs = reqsDe(j.req); });
-  // opções da caixa: apenas os requerimentos que aparecem em alguma técnica do documento
-  const NO_DOC = new Set(CAT_J.flatMap((j) => j.reqs));
-  const OPCOES_REQ = R.REQUERIMENTOS.filter(([, n]) => NO_DOC.has(n)).map(([g, n]) => [g, n])
-    .concat([...NO_DOC].filter((n) => !GRUPO_REQ[n]).map((n) => ['Outros', n]));
+  CAT_J.forEach((j) => { j.reqs = reqsDe(j.req).reqs; });
   const ELEM_CAT = { KATON: 'katon', SUITON: 'suiton', FUUTON: 'fuuton', RAITON: 'raiton', DOTON: 'doton' };
   const ELEM_RE = {
     katon: /\bkaton\b|estilo do fogo|libera[çc][aã]o de fogo/i, suiton: /\bsuiton\b|libera[çc][aã]o de [aá]gua/i,
@@ -222,7 +238,17 @@
     `<select id="${idO}" aria-label="Filtrar por origem" style="width:auto">${opt('', 'Todas as origens', o)}${opt('cla', 'Técnicas de clã', o)}${opt('inata', 'Técnicas de habilidade inata', o)}</select>
      <select id="${idE}" aria-label="Filtrar por elemento" style="width:auto">${opt('', 'Todos os elementos', e)}${R.ELEMENTOS.map((x) => opt(x.id, x.nome, e)).join('')}</select>`;
   const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}`);
-  const itemDoCatalogo = (i, qtd = 1) => ({
+  function estruturarItem(it) {
+    if (it.v === 2) return it;
+    const { alcance, exato } = alcanceDe(it.range);
+    const rOrig = String(it.range || '').trim();
+    it.v = 2;
+    estruturarDano(it);
+    if (!exato || /[aá]rea/i.test(rOrig)) notaLivro(it, `Range ${rOrig}`);
+    it.range = alcance;
+    return it;
+  }
+  const itemDoCatalogo = (i, qtd = 1) => estruturarItem({
     id: uid(), n: i.n, g: i.g, qtd, peso: i.peso == null ? 0 : i.peso, dano: i.dano || '', range: i.range || '',
     custo: i.custo || '', notas: i.obs || '',
   });
@@ -446,6 +472,12 @@
   const area = (k, val, extra = '') => `<textarea data-k="${k}" ${extra}>${esc(val)}</textarea>`;
   // caixa de seleção; se o valor salvo não estiver entre as opções, mostra "—" até o usuário escolher
   const selecao = (k, ops, val) => `<select data-k="${k}" data-r>${ops.includes(val) ? '' : opt('', '—', '')}${ops.map((o) => opt(o, o, val)).join('')}</select>`;
+  // Dano "-" ou quantidade "d" faces, tudo numa caixa só
+  const danoCampo = (k, o) => `<div class="campo"><span>Dano</span><div class="combo">
+      ${o.danoTipo === 'd' ? `<input data-k="${k('danoQtd')}" class="so-digitos" inputmode="numeric" value="${esc(o.danoQtd)}" placeholder="0" aria-label="Quantidade de dados">` : ''}
+      <select data-k="${k('danoTipo')}" data-r aria-label="Tipo de dano">${opt('-', '-', o.danoTipo)}${opt('d', 'd', o.danoTipo)}</select>
+      ${o.danoTipo === 'd' ? `<input data-k="${k('danoFaces')}" class="so-digitos" inputmode="numeric" value="${esc(o.danoFaces)}" placeholder="0" aria-label="Faces do dado">` : ''}
+    </div></div>`;
   const tecnicaDN = (k, val) => {
     const nomes = [...new Set(F.jutsus.map((j) => j.n).filter(Boolean))];
     return `<select data-k="${k}">${opt('', '—', nomes.includes(val) ? val : '')}${nomes.map((n) => opt(n, n, val)).join('')}</select>`;
@@ -646,7 +678,7 @@
   function caixaReqs(j, i) {
     const reqs = j.reqs || [];
     const grupos = {};
-    OPCOES_REQ.forEach(([g, n]) => { if (!reqs.includes(n)) (grupos[g] = grupos[g] || []).push(n); });
+    R.REQUERIMENTOS.forEach(([g, n]) => { if (!reqs.includes(n)) (grupos[g] = grupos[g] || []).push(n); });
     return `<div class="campo campo-largo"><span>Requerimentos</span><div class="multi">
       ${reqs.map((r, ri) => `<span class="chip fixo">${esc(r)}<button class="x" data-acao="remReq" data-i="${i}" data-ri="${ri}" aria-label="Remover ${esc(r)}">×</button></span>`).join('')}
       <select class="addReq" data-i="${i}" aria-label="Adicionar requerimento"><option value="">${reqs.length ? '+ Adicionar requerimento' : 'Nenhum · escolha para adicionar'}</option>${Object.entries(grupos).map(([g, ns]) => `<optgroup label="${esc(g)}">${ns.map((n) => opt(n, n)).join('')}</optgroup>`).join('')}</select>
@@ -665,6 +697,7 @@
         <div class="campos">
           ${campo('Nome', inp(k('n'), j.n))}
           ${campo('Rank', selecao(k('rank'), RANKS_JUTSU, j.rank))}
+          ${campo('Tipo', selecao(k('tipo'), TIPOS_JUTSU, j.tipo))}
           <div class="campo"><span>Custo</span><div class="linha" style="gap:6px;flex-wrap:nowrap">
             ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `min="0" class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
             <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
@@ -672,11 +705,7 @@
           <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
           ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
           ${campo('Área', selecao(k('area'), AREAS, j.area))}
-          <div class="campo"><span>Dano</span><div class="linha" style="gap:4px;flex-wrap:nowrap">
-            ${j.danoTipo === 'd' ? `<input data-k="${k('danoQtd')}" class="mini so-digitos" inputmode="numeric" value="${esc(j.danoQtd)}" aria-label="Quantidade de dados">` : ''}
-            <select data-k="${k('danoTipo')}" data-r aria-label="Tipo de dano" style="width:auto">${opt('-', '-', j.danoTipo)}${opt('d', 'd', j.danoTipo)}</select>
-            ${j.danoTipo === 'd' ? `<input data-k="${k('danoFaces')}" class="mini so-digitos" inputmode="numeric" value="${esc(j.danoFaces)}" aria-label="Faces do dado">` : ''}
-          </div></div>
+          ${danoCampo(k, j)}
           ${campo('Aprendizado', selecao(k('apr'), APRENDIZADOS, j.apr))}
           ${caixaReqs(j, i)}
           ${j.rank === 'S' ? '' : `<div class="campo-linha"><label class="linha" style="gap:10px"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="6" class="mini" data-r')}</label>${num(j.aprim) >= 6 && j.rank ? `<button class="btn peq primario" data-acao="upar" data-i="${i}">Upar</button>` : ''}</div>`}
@@ -759,15 +788,15 @@
         <summary>
           <span class="item-linha"><span class="item-nome">${esc(it.n) || '<i>Sem nome</i>'}</span>
             <span class="linha" style="gap:4px"><button class="btn-ico" data-acao="qtd" data-i="${i}" data-s="-1" aria-label="Menos">−</button><span class="num" style="min-width:26px;text-align:center" data-v="itens.${i}.qtd">${it.qtd}</span><button class="btn-ico" data-acao="qtd" data-i="${i}" data-s="1" aria-label="Mais">+</button></span></span>
-          <span class="item-meta">${it.dano ? `<span>Dano <b>${esc(it.dano)}</b></span>` : ''}${it.range ? `<span>Range <b>${esc(it.range)}</b></span>` : ''}<span>Peso <b>${num(it.peso)} g</b></span>${it.g ? `<span>${esc(it.g)}</span>` : ''}</span>
+          <span class="item-meta">${it.danoTipo === 'd' ? `<span>Dano <b>${esc(fmtDano(it))}</b></span>` : ''}${it.range && it.range !== '-' ? `<span>Range <b>${esc(it.range)}</b></span>` : ''}<span>Peso <b>${num(it.peso)} g</b></span>${it.g ? `<span>${esc(it.g)}</span>` : ''}</span>
         </summary>
         <div class="item-corpo">
           <div class="campos">
             ${campo('Nome', inp(k('n'), it.n))}
             ${campo('Quantidade', numInp(k('qtd'), it.qtd, 'min="0"'))}
             ${campo('Peso unitário (g)', numInp(k('peso'), it.peso, 'min="0" step="5"'))}
-            ${campo('Dano', inp(k('dano'), it.dano))}
-            ${campo('Range', inp(k('range'), it.range))}
+            ${danoCampo(k, it)}
+            ${campo('Range', selecao(k('range'), ALCANCES, it.range))}
             ${campo('Custo', inp(k('custo'), it.custo))}
           </div>
           ${campo('Efeito / observação', area(k('notas'), it.notas, 'rows="2"'))}
@@ -1236,7 +1265,7 @@
       if (aba === 'jutsus') render();
     },
     novaTecnica() {
-      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', danoTipo: '-', danoQtd: '', danoFaces: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
+      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, tipo: '', custoTipo: 'chakra', custoQtd: 0, efeito: '', danoTipo: '-', danoQtd: '', danoFaces: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
       ui.jq = ''; ui.jrank = '';
       render();
       const d = $$('#listaJutsus details'); const alvo = d.find((x) => x.querySelector('.item-nome').textContent === 'Nova técnica');
@@ -1267,7 +1296,7 @@
       if (ex) ex.qtd = num(ex.qtd) + 1; else F.itens.push(itemDoCatalogo(it));
       salvar(); toast(`${esc(it.n)} adicionado.`); if (aba === 'inventario') render();
     },
-    novoItem() { F.itens.push({ id: uid(), n: 'Novo item', g: '', qtd: 1, peso: 0, dano: '', range: '', custo: '', notas: '' }); return true; },
+    novoItem() { F.itens.push({ v: 2, id: uid(), n: 'Novo item', g: '', qtd: 1, peso: 0, danoTipo: '-', danoQtd: '', danoFaces: '', range: '-', custo: '', notas: '' }); return true; },
     remItem(el) { F.itens.splice(+el.dataset.i, 1); return true; },
     qtd(el) { const it = F.itens[+el.dataset.i]; it.qtd = Math.max(0, num(it.qtd) + Number(el.dataset.s)); atualizarDerivados(); salvar(); },
     abrirCriaturas() { modalCriaturas(); },

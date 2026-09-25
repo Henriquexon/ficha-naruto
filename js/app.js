@@ -102,6 +102,7 @@
       if (!j.tipo) j.tipo = TIPO_CAT[j.cat] || '';
       estruturarDano(j);
       marcarJutsu(j);
+      if (!j.estilo) j.porTurno = custoDoLivroPorTurno(j);
       limparEfeito(j);
       j.aprim = clamp(num(j.aprim), 0, 6);
       return j;
@@ -258,9 +259,11 @@
     j.defesaExtra = inicio.includes('defesa extra');
     j.concentracao = inicio.includes('concentração');
     j.estilo = inicio.includes('estilo de luta');
-    j.porTurno = j.estilo || /turno/i.test(String(j.custo || '')) || /Custo [^·\n]*turno/i.test(String(j.notas || ''));
+    j.porTurno = j.estilo || custoDoLivroPorTurno(j);
     return j;
   }
+  // "por turno" só vale quando o custo do livro diz isso (não confundir com "Custo de Ações Turno de Defesa")
+  const custoDoLivroPorTurno = (j) => /turno/i.test(String(j.custo || '')) || /(?:No livro: |· )Custo \d[^·\n]*turno/i.test(String(j.notas || ''));
   // Custo por turno de chakra pelo rank (tabela de Chakra Mínimo/Máximo por Turno, Treinos)
   const CUSTO_TURNO = { D: [1, 2], C: [3, 5], B: [7, 10], A: [13, 22] };
   function ajustarCustoTurno(j) {
@@ -424,7 +427,7 @@
     D.pontosPericia = Object.entries(D.periciaCont).reduce((s, [id, c]) => (id === 'jiongu' ? s : s + (c >= 2 ? 4 : 0) + (c >= 4 ? 4 : 0)), 0);
     D.pontosPericiaGastos = F.talentosPericia.reduce((s, t) => s + num(t.pts), 0);
     D.jutsuExtra = A.car > 0 ? Math.ceil(A.car / 2) : 0;
-    D.paMax = Math.min(5, 3 + (A.int >= 3 ? 1 + Math.floor((A.int - 3) / 2) : 0));
+    D.paMax = 3 + (A.int >= 3 ? 1 : 0) + (A.int >= 5 ? 1 : 0);
     if (temTalento('Um Passo à Frente') && A.int >= 1) D.paMax = Math.max(D.paMax, 4);
     // Soco: nível escolhido + níveis da perícia de Taijutsu; sem a 2ª perícia o máximo é o nível 4 (2d6)
     const socoMax = (D.periciaCont.taijutsu || 0) >= 2 ? 12 : 4;
@@ -447,6 +450,7 @@
     if (num(F.pvAtual) > D.vidaMax) F.pvAtual = D.vidaMax;
     if (num(F.chakraAtual) > D.chakraMax) F.chakraAtual = D.chakraMax;
     if (num(F.protagonismo) > D.protMax) F.protagonismo = D.protMax;
+    if (num(F.pa) > D.paMax) F.pa = D.paMax;
   }
 
   // ---------------------------------------------------------------- UI: topo
@@ -619,7 +623,7 @@
       <div class="painel-topo"><h2>Combate</h2></div>
       <div class="stats">
         ${stat('Deslocamento', `<span data-d="desl">${D.desl}</span> m`)}
-        ${stat('Pontos de Ação', `${numInp('pa', F.pa, 'min="1" max="5" class="mini"')}`)}
+        ${stat('Pontos de Ação', `${numInp('pa', F.pa, `min="1" max="${D.paMax}" class="mini" title="Máximo com Inteligência ${sinal(D.attr.int)}: ${D.paMax}"`)}`)}
         ${stat('Regen. de chakra', `<span data-d="regen">${D.regen}</span>`)}
         ${stat('Percepção passiva', `<span data-d="percepcao">${D.percepcao}</span>`)}
         <div class="stat"><span class="rotulo">Soco</span><span class="valor">${D.soco[1]} <small>Nv ${D.socoNv}</small></span><select class="stat-sel" data-k="soco" data-r aria-label="Nível base do soco">${R.SOCO.slice(1).map((s, i) => opt(i + 1, `Nível base ${i + 1}`, F.soco)).join('')}</select></div>
@@ -738,17 +742,16 @@
     return `<details class="item" data-id="${esc(j.id)}">
       <summary>
         <span class="item-linha"><span class="rank">${rankLetra(j.rank)}</span><span class="item-nome">${esc(j.n) || '<i>Sem nome</i>'}</span>${MARCAS.filter(([m]) => j[m]).map(([, t]) => `<span class="tag">${t}</span>`).join('')}${num(j.aprim) && j.rank !== 'S' ? `<span class="tag">Aprim. ${j.aprim}</span>` : ''}</span>
-        <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(fmtDano(j))}</b></span>${j.cat ? `<span>${esc(j.grp || j.cat)}</span>` : ''}</span>
+        <span class="item-meta"><span>Custo <b>${esc(fmtCusto(j))}</b></span><span>PA <b>${num(j.paQtd)}</b></span><span>Range <b>${esc(j.range && j.range !== '-' ? j.range : '—')}</b></span>${j.area && j.area !== '-' ? `<span>Área <b>${esc(j.area)}</b></span>` : ''}<span>Dano <b>${esc(fmtDano(j))}</b></span></span>
       </summary>
       <div class="item-corpo">
-        <div class="campos">
+        <div class="campos campos-jutsu">
           ${campo('Nome', inp(k('n'), j.n))}
           ${campo('Rank', selecao(k('rank'), RANKS_JUTSU, j.rank))}
           ${campo('Tipo', selecao(k('tipo'), TIPOS_JUTSU, j.tipo))}
-          <div class="campo"><span>Custo</span><div class="linha" style="gap:6px;flex-wrap:nowrap">
-            ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `${j.estilo && j.custoTipo === 'chakra' && CUSTO_TURNO[j.rank] ? `min="${CUSTO_TURNO[j.rank][0]}" max="${CUSTO_TURNO[j.rank][1]}" title="Rank ${j.rank}: ${CUSTO_TURNO[j.rank][0]} a ${CUSTO_TURNO[j.rank][1]} de chakra por turno"` : 'min="0"'} class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
-            <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
-            ${j.porTurno && j.custoTipo !== '-' ? '<span class="sub">/turno</span>' : ''}
+          <div class="campo"><span>Custo</span><div class="combo combo-cheio">
+            ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `${j.estilo && j.custoTipo === 'chakra' && CUSTO_TURNO[j.rank] ? `min="${CUSTO_TURNO[j.rank][0]}" max="${CUSTO_TURNO[j.rank][1]}" title="Rank ${j.rank}: ${CUSTO_TURNO[j.rank][0]} a ${CUSTO_TURNO[j.rank][1]} de chakra por turno"` : 'min="0"'} aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
+            <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t + (j.porTurno && v !== '-' ? '/turno' : ''), j.custoTipo)).join('')}</select>
           </div></div>
           <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
           ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
@@ -947,7 +950,7 @@
     const upgrades = `
     <section class="painel c6">
       <div class="painel-topo"><h2>Upgrades de clã</h2><span class="extra">Níveis 5, 10, 15 e 20</span></div>
-      ${NIVEIS_UPGRADE.map((n) => campo(`Nível ${n}${F.nivel < n ? ' · ainda não alcançado' : ''}`, area(`upgrades.${n}`, F.upgrades[n], 'rows="2" placeholder="Aprimoramento, novo jutsu, técnica criada, despertar…"'))).join('')}
+      ${NIVEIS_UPGRADE.map((n) => campo(`Nível ${n}${F.nivel < n ? ' · ainda não alcançado' : ''}`, area(`upgrades.${n}`, F.upgrades[n], `rows="2" placeholder="Aprimoramento, novo jutsu, técnica criada, despertar…"${F.nivel < n ? ' disabled' : ''}`))).join('')}
     </section>`;
 
     const tc = F.treinoCalc;
@@ -1404,7 +1407,7 @@
     else v = el.value;
     if (k === 'nivel') v = clamp(num(v, 1), 1, 20);
     if (/^jutsus\.\d+\.aprim$/.test(k)) { v = clamp(num(v), 0, 6); el.value = v; }
-    if (k === 'pa' && el.value !== '') { v = clamp(num(v, 3), 1, 5); el.value = v; }
+    if (k === 'pa' && el.value !== '') { v = clamp(num(v, 3), 1, D.paMax); el.value = v; }
     setPath(F, k, v);
     salvar();
     return el.hasAttribute('data-r');
@@ -1468,7 +1471,7 @@
     const mj = el.dataset.k.match(/^jutsus\.(\d+)\.(estilo|rank|custoTipo|custoQtd)$/);
     if (mj) {
       const j = F.jutsus[+mj[1]];
-      if (mj[2] === 'estilo' && !j.estilo) j.porTurno = /turno/i.test(String(j.custo || ''));
+      if (mj[2] === 'estilo' && !j.estilo) j.porTurno = custoDoLivroPorTurno(j);
       ajustarCustoTurno(j); salvar();
       if (mj[2] === 'custoQtd') el.value = j.custoQtd;
     }

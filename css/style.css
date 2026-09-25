@@ -217,6 +217,7 @@ p { margin: 0; }
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 /* caixas alinhadas pela base mesmo quando um título quebra em duas linhas */
 .campos.campos-base { align-items: end; }
+.campos.campos-jutsu { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .campo { display: grid; gap: 4px; min-width: 0; }
 .campo-largo { grid-column: 1 / -1; }
 .marcas { display: flex; flex-wrap: wrap; gap: 8px 18px; }
@@ -232,6 +233,11 @@ p { margin: 0; }
 .campo .combo > input { width: 3.2em; text-align: center; padding: 7px 4px; font-family: var(--f-mono); }
 .campo .combo > select { width: auto; min-width: 3.4em; padding: 7px 22px 7px 10px; border-inline: 1px solid var(--line); }
 .campo .combo > select:only-child { border-inline: 0; }
+.campo .combo.combo-cheio { width: 100%; }
+.campo .combo.combo-cheio > select { flex: 1 1 auto; min-width: 0; border-inline-end: 0; padding: 7px 18px 7px 7px; background-position: right 4px center; }
+.campo .combo.combo-cheio > input { width: 2.6em; padding-inline: 2px; }
+.campo .combo.combo-cheio > select { font-size: .92rem; }
+textarea:disabled, input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
 /* listas abertas das caixas de seleção com fundo e letra contrastantes */
 option, optgroup { background-color: var(--surface); color: var(--ink); }
 .campo-linha label > span { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }

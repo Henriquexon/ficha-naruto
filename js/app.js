@@ -89,7 +89,7 @@
       out.bonus.chakra = Math.max(0, num(out.bonus.chakra) - 10);
       out.bonus.regen = Math.max(0, num(out.bonus.regen) - 5);
     }
-    out.jutsus = out.jutsus.map(estruturarJutsu);
+    out.jutsus = out.jutsus.map((j) => { estruturarJutsu(j); if (!Array.isArray(j.reqs)) j.reqs = reqsDe(j.req); return j; });
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
@@ -146,7 +146,7 @@
     if (a && a !== '-' && a.toUpperCase() !== ap) livro.push(`Aprendizado ${a.replace(/\s+/g, ' ')}`);
     const nota = livro.length ? `No livro: ${livro.join(' · ')}` : '';
     return Object.assign(j, {
-      v: 2, rank: letra === '—' ? '' : letra, custoTipo: tipo, custoQtd: tipo === '-' ? 0 : (nC ? Number(nC[0]) : 0),
+      v: 2, reqs: Array.isArray(j.reqs) ? j.reqs : reqsDe(j.req), rank: letra === '—' ? '' : letra, custoTipo: tipo, custoQtd: tipo === '-' ? 0 : (nC ? Number(nC[0]) : 0),
       paQtd: nP ? Number(nP[0]) : 0, range: alcance, area, apr: ap,
       notas: [nota, txt(j.notas)].filter(Boolean).join('\n'),
     });
@@ -155,6 +155,46 @@
     id: uid(), n: j.n, cat: j.cat, grp: j.grp, rank: j.rank, custo: j.custo, efeito: j.efeito, dano: j.dano,
     req: j.req, range: j.range, apr: j.apr, pa: j.pa, aprim: 0, notas: '', origem: 'catalogo',
   });
+  // Texto de requerimento do livro -> opções normalizadas (o que não casar fica como está)
+  function reqsDe(texto) {
+    const out = [];
+    String(texto || '').split(/[;/,\n]/).map((x) => x.trim().replace(/\.+$/, '').trim())
+      .filter((x) => x && !/^-+$/.test(x)).forEach((seg) => {
+        const ou = / ou /i.test(seg);
+        const achou = R.REQUERIMENTOS.filter(([, n, re]) => (!ou || / ou /.test(n)) && re.test(seg));
+        if (ou) { out.push(achou.length ? achou[0][1] : seg); return; }
+        if (achou.length) achou.forEach(([, n]) => { if (!out.includes(n)) out.push(n); });
+        else if (!out.includes(seg)) out.push(seg);
+      });
+    return out;
+  }
+  const GRUPO_REQ = {};
+  R.REQUERIMENTOS.forEach(([g, n]) => { GRUPO_REQ[n] = g; });
+  CAT_J.forEach((j) => { j.reqs = reqsDe(j.req); });
+  const ELEM_CAT = { KATON: 'katon', SUITON: 'suiton', FUUTON: 'fuuton', RAITON: 'raiton', DOTON: 'doton' };
+  const ELEM_RE = {
+    katon: /\bkaton\b|estilo do fogo|libera[çc][aã]o de fogo/i, suiton: /\bsuiton\b|libera[çc][aã]o de [aá]gua/i,
+    fuuton: /\bf[uū]u?ton\b|libera[çc][aã]o de vento/i, raiton: /\braiton\b|libera[çc][aã]o de (raio|rel[aâ]mpago)/i,
+    doton: /\bdoton\b|libera[çc][aã]o de terra/i,
+  };
+  function elementosDe(j) {
+    const out = new Set();
+    if (ELEM_CAT[j.cat]) out.add(ELEM_CAT[j.cat]);
+    Object.entries(ELEM_RE).forEach(([id, re]) => { if (re.test(j.n || '')) out.add(id); });
+    (j.reqs || []).forEach((r) => { const m = r.match(/^(Elemento|Máscara de) (\w+)/); if (m && ELEM_RE[m[2].toLowerCase()]) out.add(m[2].toLowerCase()); });
+    return out;
+  }
+  const deCla = (j) => j.cat === 'CLÃS' || (j.reqs || []).some((r) => GRUPO_REQ[r] === 'Clã');
+  const deInata = (j) => j.cat === 'HABILIDADES INATAS' || (j.reqs || []).some((r) => GRUPO_REQ[r] === 'Habilidade inata' || GRUPO_REQ[r] === 'Kinjutsu');
+  function passaFiltros(j, orig, el) {
+    if (orig === 'cla' && !deCla(j)) return false;
+    if (orig === 'inata' && !deInata(j)) return false;
+    if (el && !elementosDe(j).has(el)) return false;
+    return true;
+  }
+  const filtrosHTML = (idO, idE, o, e) =>
+    `<select id="${idO}" aria-label="Filtrar por origem" style="width:auto">${opt('', 'Todas as origens', o)}${opt('cla', 'Técnicas de clã', o)}${opt('inata', 'Técnicas de habilidade inata', o)}</select>
+     <select id="${idE}" aria-label="Filtrar por elemento" style="width:auto">${opt('', 'Todos os elementos', e)}${R.ELEMENTOS.map((x) => opt(x.id, x.nome, e)).join('')}</select>`;
   const fmtCusto = (j) => (j.custoTipo === '-' || !j.custoTipo ? '—' : `${num(j.custoQtd)} ${j.custoTipo === 'vida' ? 'Vida' : 'Chakra'}`);
   const itemDoCatalogo = (i, qtd = 1) => ({
     id: uid(), n: i.n, g: i.g, qtd, peso: i.peso == null ? 0 : i.peso, dano: i.dano || '', range: i.range || '',
@@ -565,12 +605,22 @@
   }
 
   // ---------------------------------------------------------------- ABA: Jutsus
-  const ui = { jq: '', jrank: '', cat: { q: '', cat: '', rank: '', meu: false, lim: 40 }, loja: { q: '', g: '' }, criat: { g: '' } };
+  const ui = { jq: '', jrank: '', jorig: '', jel: '', cat: { q: '', cat: '', rank: '', meu: false, orig: '', el: '', lim: 40 }, loja: { q: '', g: '' }, criat: { g: '' } };
 
   function gruposMeus() {
     const g = [].concat(D.cla.grupos || []);
     F.inatas.forEach((id) => { const h = R.INATAS.find((x) => x.id === id); if (h && h.grupos) g.push(...h.grupos); });
     return g;
+  }
+
+  function caixaReqs(j, i) {
+    const reqs = j.reqs || [];
+    const grupos = {};
+    R.REQUERIMENTOS.forEach(([g, n]) => { if (!reqs.includes(n)) (grupos[g] = grupos[g] || []).push(n); });
+    return `<div class="campo campo-largo"><span>Requerimentos</span><div class="multi">
+      ${reqs.map((r, ri) => `<span class="chip fixo">${esc(r)}<button class="x" data-acao="remReq" data-i="${i}" data-ri="${ri}" aria-label="Remover ${esc(r)}">×</button></span>`).join('')}
+      <select class="addReq" data-i="${i}" aria-label="Adicionar requerimento"><option value="">${reqs.length ? '+ Adicionar requerimento' : 'Nenhum · escolha para adicionar'}</option>${Object.entries(grupos).map(([g, ns]) => `<optgroup label="${esc(g)}">${ns.map((n) => opt(n, n)).join('')}</optgroup>`).join('')}</select>
+    </div></div>`;
   }
 
   function cartaoJutsu(j, i) {
@@ -585,15 +635,15 @@
           ${campo('Nome', inp(k('n'), j.n))}
           ${campo('Rank', selecao(k('rank'), RANKS_JUTSU, j.rank))}
           <div class="campo"><span>Custo</span><div class="linha" style="gap:6px;flex-wrap:nowrap">
-            <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
             ${j.custoTipo !== '-' ? numInp(k('custoQtd'), num(j.custoQtd), `min="0" class="mini" aria-label="Quantidade de ${j.custoTipo === 'vida' ? 'vida' : 'chakra'}"`) : ''}
+            <select data-k="${k('custoTipo')}" data-r aria-label="Tipo de custo" style="width:auto">${[['chakra', 'Chakra'], ['vida', 'Vida'], ['-', '-']].map(([v, t]) => opt(v, t, j.custoTipo)).join('')}</select>
           </div></div>
           <div class="campo"><span>Custo de Ações</span><div class="linha" style="gap:6px;flex-wrap:nowrap">${numInp(k('paQtd'), num(j.paQtd), 'min="0" class="mini" aria-label="Custo de ações em PA"')}<span class="sub">PA</span></div></div>
           ${campo('Range', selecao(k('range'), ALCANCES, j.range))}
           ${campo('Área', selecao(k('area'), AREAS, j.area))}
           ${campo('Dano', inp(k('dano'), j.dano))}
-          ${campo('Requerimentos', inp(k('req'), j.req))}
           ${campo('Aprendizado', selecao(k('apr'), APRENDIZADOS, j.apr))}
+          ${caixaReqs(j, i)}
           <label class="campo-linha"><span>Rank de aprimoramento</span>${numInp(k('aprim'), j.aprim || 0, 'min="0" max="5" class="mini"')}</label>
         </div>
         ${campo('Efeito', area(k('efeito'), j.efeito, 'rows="4"'))}
@@ -606,7 +656,7 @@
   function abaJutsus() {
     const q = ui.jq.toLowerCase();
     const lista = F.jutsus.map((j, i) => [j, i])
-      .filter(([j]) => (!q || (j.n + ' ' + j.efeito + ' ' + j.grp + ' ' + j.cat).toLowerCase().includes(q)) && (!ui.jrank || rankLetra(j.rank) === ui.jrank))
+      .filter(([j]) => (!q || (j.n + ' ' + j.efeito + ' ' + j.grp + ' ' + j.cat + ' ' + (j.reqs || []).join(' ')).toLowerCase().includes(q)) && (!ui.jrank || rankLetra(j.rank) === ui.jrank) && passaFiltros(j, ui.jorig, ui.jel))
       .sort((a, b) => (RANK_ORD[rankLetra(a[0].rank)] ?? 9) - (RANK_ORD[rankLetra(b[0].rank)] ?? 9));
     const iniciais = CAT_J.filter((j) => gruposMeus().includes(j.grp) && /^I\b/.test(String(j.apr).trim()));
     const compra = NIVEIS_COMPRA.includes(F.nivel);
@@ -616,6 +666,7 @@
         <div class="barra-ferr">
           <input type="search" id="jBusca" placeholder="Buscar nas suas técnicas" value="${esc(ui.jq)}" aria-label="Buscar nas suas técnicas">
           <select id="jRank" aria-label="Filtrar por rank" style="width:auto">${opt('', 'Todos os ranks', ui.jrank)}${RANKS_JUTSU.map((r) => opt(r, 'Rank ' + r, ui.jrank)).join('')}</select>
+          ${filtrosHTML('jOrig', 'jEl', ui.jorig, ui.jel)}
           <button class="btn primario" data-acao="abrirCatalogo">Adicionar do livro de jutsus</button>
           <button class="btn" data-acao="novaTecnica">Técnica criada em treino</button>
           ${iniciais.length ? `<button class="btn" data-acao="iniciais">Técnicas iniciais (I) do clã/habilidade · ${iniciais.length}</button>` : ''}
@@ -636,6 +687,7 @@
       <div class="barra-ferr">
         <select id="catCat" aria-label="Categoria" style="flex:1 1 180px">${opt('', 'Todas as categorias', c.cat)}${cats.map((x) => opt(x, x.charAt(0) + x.slice(1).toLowerCase(), c.cat)).join('')}</select>
         <select id="catRank" aria-label="Rank" style="flex:0 1 140px">${opt('', 'Todos os ranks', c.rank)}${R.RANKS.map((r) => opt(r, 'Rank ' + r, c.rank)).join('')}</select>
+        ${filtrosHTML('catOrig', 'catEl', c.orig, c.el)}
         <label class="linha sub"><input type="checkbox" id="catMeu" ${c.meu ? 'checked' : ''}> Só do meu clã e habilidades</label>
       </div>
       <div class="lista" id="catLista"></div>`);
@@ -646,7 +698,7 @@
     const c = ui.cat, q = c.q.toLowerCase(), meus = gruposMeus();
     const achados = CAT_J.map((j, idx) => [j, idx]).filter(([j]) =>
       (!q || (j.n + ' ' + j.efeito + ' ' + j.req + ' ' + j.grp).toLowerCase().includes(q)) &&
-      (!c.cat || j.cat === c.cat) && (!c.rank || rankLetra(j.rank) === c.rank) && (!c.meu || meus.includes(j.grp)));
+      (!c.cat || j.cat === c.cat) && (!c.rank || rankLetra(j.rank) === c.rank) && (!c.meu || meus.includes(j.grp)) && passaFiltros(j, c.orig, c.el));
     const tem = new Set(F.jutsus.map((j) => j.n));
     const el = $('#catLista'); if (!el) return;
     el.innerHTML = `<p class="sub">${achados.length} técnica(s) encontradas.</p>` + achados.slice(0, c.lim).map(([j, idx]) => `
@@ -1158,7 +1210,7 @@
       if (aba === 'jutsus') render();
     },
     novaTecnica() {
-      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', dano: '', req: '', range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
+      F.jutsus.push({ v: 2, id: uid(), n: 'Nova técnica', cat: '', grp: 'Criada em treino', rank: D.rank, custoTipo: 'chakra', custoQtd: 0, efeito: '', dano: '', reqs: [], range: '-', area: '-', apr: '', paQtd: 2, aprim: 0, notas: '', origem: 'criada' });
       ui.jq = ''; ui.jrank = '';
       render();
       const d = $$('#listaJutsus details'); const alvo = d.find((x) => x.querySelector('.item-nome').textContent === 'Nova técnica');
@@ -1172,6 +1224,7 @@
       toast(novos.length ? `${novos.length} técnica(s) inicial(is) adicionada(s).` : 'As técnicas iniciais já estão na ficha.');
       return true;
     },
+    remReq(el) { F.jutsus[+el.dataset.i].reqs.splice(+el.dataset.ri, 1); return true; },
     remJutsu(el) { F.jutsus.splice(+el.dataset.i, 1); return true; },
     abrirLoja() { modalLoja(); },
     addItem(el) {
@@ -1266,6 +1319,15 @@
       salvar(); render(); return;
     }
     if (el.id === 'jRank') { ui.jrank = el.value; render(); return; }
+    if (el.id === 'jOrig') { ui.jorig = el.value; render(); return; }
+    if (el.id === 'jEl') { ui.jel = el.value; render(); return; }
+    if (el.id === 'catOrig') { ui.cat.orig = el.value; ui.cat.lim = 40; renderCatalogo(); return; }
+    if (el.id === 'catEl') { ui.cat.el = el.value; ui.cat.lim = 40; renderCatalogo(); return; }
+    if (el.classList.contains('addReq') && el.value) {
+      const j = F.jutsus[+el.dataset.i]; j.reqs = j.reqs || [];
+      if (!j.reqs.includes(el.value)) j.reqs.push(el.value);
+      salvar(); render(); return;
+    }
     if (el.id === 'catCat') { ui.cat.cat = el.value; ui.cat.lim = 40; renderCatalogo(); return; }
     if (el.id === 'catRank') { ui.cat.rank = el.value; ui.cat.lim = 40; renderCatalogo(); return; }
     if (el.id === 'catMeu') { ui.cat.meu = el.checked; ui.cat.lim = 40; renderCatalogo(); return; }

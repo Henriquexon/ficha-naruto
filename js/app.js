@@ -744,7 +744,6 @@
     <section class="painel c6">
       <div class="painel-topo"><h2>Upgrades de clã</h2><span class="extra">Níveis 5, 10, 15 e 20</span></div>
       ${NIVEIS_UPGRADE.map((n) => campo(`Nível ${n}${F.nivel < n ? ' · ainda não alcançado' : ''}`, area(`upgrades.${n}`, F.upgrades[n], 'rows="2" placeholder="Aprimoramento, novo jutsu, técnica criada, despertar…"'))).join('')}
-      <p class="sub">Opções: aprimorar técnica até 1 rank acima (chakra ao mínimo do rank e +30% de dano), alterar efeito de técnica, aprender jutsu do seu rank, criar jutsu do seu rank fora das regras, unir 2 estilos de luta, ou despertar técnicas (D).</p>
     </section>`;
 
     const tc = F.treinoCalc;
@@ -775,7 +774,6 @@
       <div class="tabela-wrap"><table class="nivel-tab"><tbody>
         ${Object.entries(R.ESCALONAMENTO).map(([lv, t]) => `<tr class="${Number(lv) === F.nivel ? 'atual' : Number(lv) < F.nivel ? 'passado' : ''}"><td>${lv}</td><td>${esc(t) || '—'}</td></tr>`).join('')}
       </tbody></table></div>
-      <p class="sub">Sem comprar jutsu, o ninja pode receber Ryo de missão do rank: níveis 1, 2 e 4: 200 · 7 e 9: 400 · 12 e 14: 800 · 17, 19 e 20: 1600.</p>
     </section>`;
 
     return `<div class="grade">${pericias}${upgrades}${treinos}${escal}</div>`;
@@ -825,7 +823,6 @@
         <div class="painel-topo"><h2>Invocações e companheiros</h2><span class="extra">${F.companheiros.length}</span></div>
         <div class="barra-ferr"><button class="btn primario" data-acao="abrirCriaturas">Adicionar criatura</button><button class="btn" data-acao="novoComp">Em branco</button></div>
         <div class="lista">${comps || '<div class="vazio">Nenhuma invocação ou companheiro.</div>'}</div>
-        <p class="sub">A invocação só age na rotação seguinte, antes ou depois do turno do invocador, com 3 PA (ataque 2 PA, deslocamento 1 PA). Defende como ninja, apenas com Tai (ou Constituição ao defender aliado). Máximo: 1 de rank B e 1 de rank A ou S.</p>
         <details class="item"><summary><span class="item-linha"><span class="item-nome">Invocação reversa (d20)</span></span></summary>
           <div class="item-corpo tabela-wrap"><table><tbody>${(window.INVOCACAO_REVERSA || []).map(([d, n]) => `<tr><td class="num">${d}</td><td>${esc(n)}</td></tr>`).join('')}</tbody></table></div></details>
       </section>
@@ -835,7 +832,6 @@
           <select id="addMario" aria-label="Adicionar marionete"><option value="">+ Adicionar marionete…</option>${CAT_M.map((m, i) => opt(i, `${m.n} · ${m.custo}`)).join('')}${opt('novo', 'Marionete criada em treino (em branco)')}</select>
         </div>
         <div class="lista">${marios || '<div class="vazio">Nenhuma marionete. Exige “Kugutsu no Jutsu”.</div>'}</div>
-        <p class="sub">Cada PA gasto manipulando é um PA para cada marionete. Uma jogada de ataque por marionete (2 PA, um componente). DN da marionete = DN de Ninjutsu do usuário. Consertadas no descanso longo.</p>
       </section>
     </div>`;
   }

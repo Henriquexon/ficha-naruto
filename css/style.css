@@ -12,6 +12,9 @@
   --accent-soft: #FADAB9;
   --seal: #B8281E;
   --seal-soft: #F5D8D0;
+  --selo: #B5302A;
+  --selo-soft: #F8E4E2;
+  --f-selo: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
   --vida: #3E8E37;
   --vida-soft: #DCEBCF;
   --chakra: #2F6FE0;
@@ -48,6 +51,8 @@
     --accent-soft: #432818;
     --seal: #E8594B;
     --seal-soft: #3F1D1C;
+    --selo: #E4604F;
+    --selo-soft: #3A1F1D;
     --vida: #5DBB54;
     --vida-soft: #1C3319;
     --chakra: #5E9BFF;
@@ -78,6 +83,8 @@
   --accent-soft: #432818;
   --seal: #E8594B;
   --seal-soft: #3F1D1C;
+  --selo: #E4604F;
+  --selo-soft: #3A1F1D;
   --vida: #5DBB54;
   --vida-soft: #1C3319;
   --chakra: #5E9BFF;
@@ -146,23 +153,15 @@ p { margin: 0; }
 .topo .btn, .topo .btn-ico { background: transparent; color: var(--hdr-ink); border-color: var(--hdr-line); }
 .topo .btn:hover, .topo .btn-ico:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Selo de rank: placa da bandana ninja */
 .selo {
-  width: 56px; height: 48px; flex: none; position: relative;
-  border: 2px solid #3A3F4E; border-radius: 6px;
-  background:
-    radial-gradient(circle at 6px 6px, #5B6272 1.6px, transparent 2.2px),
-    radial-gradient(circle at calc(100% - 6px) 6px, #5B6272 1.6px, transparent 2.2px),
-    radial-gradient(circle at 6px calc(100% - 6px), #5B6272 1.6px, transparent 2.2px),
-    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px), #5B6272 1.6px, transparent 2.2px),
-    linear-gradient(160deg, #F1F3F6 0%, #C3C9D2 45%, #99A2AF 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 2px 0 rgba(0, 0, 0, .35);
-  color: #2A2F3D;
+  width: 52px; height: 52px; flex: none;
+  border: 2.5px solid var(--selo); color: var(--selo); background: var(--selo-soft);
+  border-radius: 7px; transform: rotate(-4deg);
   display: grid; place-items: center; align-content: center; gap: 0;
-  font-family: var(--f-display);
+  font-family: var(--f-selo);
 }
-.selo-rot { font-size: .5rem; letter-spacing: .2em; text-transform: uppercase; font-family: var(--f-body); font-weight: 700; line-height: 1; color: #4A5061; }
-.selo-letra { font-size: 1.55rem; line-height: 1; text-shadow: 0 1px 0 rgba(255, 255, 255, .7); }
+.selo-rot { font-size: .55rem; letter-spacing: .18em; text-transform: uppercase; font-family: var(--f-body); font-weight: 700; line-height: 1; }
+.selo-letra { font-size: 1.7rem; font-weight: 800; line-height: 1; }
 
 .nivel-ctl { display: flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, .06); border: 1px solid var(--hdr-line); border-radius: 999px; padding: 3px; }
 .nivel-val { display: grid; justify-items: center; min-width: 42px; line-height: 1.05; }
@@ -398,7 +397,7 @@ details.modulo > .modulo-corpo { padding: 0 16px 16px; display: grid; gap: 12px;
   .nivel-ctl .btn-ico { width: 28px; height: 28px; }
   #btnFichas { padding: 6px 9px; }
   .abas button { padding: 7px 10px 8px; }
-  .selo { width: 48px; height: 42px; }
+  .selo { width: 44px; height: 44px; }
   .selo-letra { font-size: 1.4rem; }
   .painel { padding: 13px; }
 }

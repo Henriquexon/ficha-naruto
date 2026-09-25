@@ -44,7 +44,7 @@
     R.ATRIBUTOS.forEach((a) => { attrs[a.id] = { pts: 0 }; });
     return {
       v: 2, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
-      cla: 'sem', claEscolha: 'nin', classe: 'equilibrado', classeEscolhas: [],
+      cla: 'sem', claEscolha: 'nin', classe: 'equilibrado', classeEscolhas: [], nivel20Attr: '',
       inatas: [], elementos: [], attrs,
       bonus: { vida: 0, chakra: 0, regen: 0, desl: 0, carga: 0, arremesso: 0, dn: 0 },
       pvAtual: null, chakraAtual: null, sobrevida: 0, sobrechakra: 0, protagonismo: null,
@@ -166,10 +166,12 @@
     return { c, acima };
   }
 
-  function temTalento(nome) { return F.talentos.some((t) => t.nome === nome); }
+  function temTalento(nome) { return F.talentos.some((t) => t.nome === nome) || F.talentosPericia.some((t) => t.nome === nome); }
+  // menor número citado no custo ("1-2" → 1, "7/6/5/4" → 4)
+  const custoMin = (c) => { const ns = String(c).match(/\d+/g); return ns ? Math.min(...ns.map(Number)) : 0; };
 
   function calc() {
-    const D = { attr: {}, claB: {}, clsB: {}, custo: {}, avisos: [] };
+    const D = { attr: {}, claB: {}, clsB: {}, custo: {}, n20: {}, avisos: [] };
     const cla = R.CLAS.find((c) => c.id === F.cla) || R.CLAS[0];
     const cls = R.CLASSES.find((c) => c.id === F.classe);
     D.cla = cla; D.cls = cls;
@@ -216,7 +218,8 @@
       const k = custoAtributo(inicio, pts);
       D.custo[a.id] = k.c; gasto += k.c;
       if (k.acima) D.avisos.push(`${a.nome} passou de 2 na distribuição inicial.`);
-      D.attr[a.id] = inicio + pts + D.clsB[a.id] + (PB.attrs[a.id] || 0);
+      D.n20[a.id] = F.nivel >= 20 ? 1 + (F.nivel20Attr === a.id ? 1 : 0) : 0;
+      D.attr[a.id] = inicio + pts + D.clsB[a.id] + (PB.attrs[a.id] || 0) + D.n20[a.id];
     });
     D.pontosAttr = gasto;
     if (gasto > 9) D.avisos.push(`Foram gastos ${gasto} pontos; o limite na criação é 9.`);
@@ -261,7 +264,7 @@
     F.talentos.forEach((t) => { D.pc.talentos += num(t.pc); });
     D.pc.total = D.pc.cla + D.pc.inatas + D.pc.talentos;
     D.peso = F.itens.reduce((s, i) => s + num(i.qtd) * num(i.peso), 0);
-    D.pontosPericia = Object.values(D.periciaCont).reduce((s, c) => s + (c >= 2 ? 4 : 0) + (c >= 4 ? 4 : 0), 0);
+    D.pontosPericia = Object.entries(D.periciaCont).reduce((s, [id, c]) => (id === 'jiongu' ? s : s + (c >= 2 ? 4 : 0) + (c >= 4 ? 4 : 0)), 0);
     D.pontosPericiaGastos = F.talentosPericia.reduce((s, t) => s + num(t.pts), 0);
     D.jutsuExtra = A.car > 0 ? Math.ceil(A.car / 2) : 0;
     D.paMax = 3 + (A.int >= 3 ? 1 + Math.floor((A.int - 3) / 2) : 0);
@@ -329,6 +332,12 @@
       pa.innerHTML = D.avisos.map(esc).join('<br>');
     }
   }
+  function modTitulo(id) {
+    const partes = [];
+    if (D.periciaB.attrs[id]) partes.push(`${sinal(D.periciaB.attrs[id])} das perícias`);
+    if (D.n20[id]) partes.push(`${sinal(D.n20[id])} do nível 20`);
+    return partes.length ? ` title="Inclui ${partes.join(' e ')}"` : '';
+  }
   function fmtBonus(b) {
     const out = [];
     if (b.vida) out.push(`+${b.vida} vida`);
@@ -365,7 +374,7 @@
       <div class="painel-topo"><h2>Identidade</h2><span class="extra">Rank <b>${D.rank}</b> pelo nível ${F.nivel}</span></div>
       <div class="campos">
         ${campo('Jogador', inp('jogador', F.jogador))}
-        ${campo('Nível', numInp('nivel', F.nivel, 'min="1" max="20" data-r'))}
+        <div class="pilha" style="gap:6px">${campo('Nível', numInp('nivel', F.nivel, 'min="1" max="20" data-r'))}${F.nivel >= 20 ? `<select data-k="nivel20Attr" data-r aria-label="Atributo que recebe o +1 extra do nível 20">${opt('', '+1 do nível 20: escolha…', F.nivel20Attr)}${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.nivel20Attr)).join('')}</select>` : ''}</div>
         ${campo('Patente', `<select data-k="patente">${R.PATENTES.map((p) => opt(p, p, F.patente)).join('')}</select>`)}
       </div>
       <div class="campos">
@@ -398,7 +407,7 @@
         <td class="c num">${sinal(D.claB[a.id])}</td>
         <td class="c"><input type="number" class="micro" min="0" max="5" data-k="attrs.${a.id}.pts" value="${F.attrs[a.id].pts}" aria-label="Pontos distribuídos em ${a.nome}"><div class="attr-desc"><span data-d="custo.${a.id}">${D.custo[a.id]}</span> pt</div></td>
         <td class="c num">${sinal(D.clsB[a.id])}</td>
-        <td class="c"><span class="mod${D.attr[a.id] < 0 ? ' neg' : ''}" data-d="attr.${a.id}" data-fmt="sinal"${D.periciaB.attrs[a.id] ? ` title="Inclui ${sinal(D.periciaB.attrs[a.id])} das perícias"` : ''}>${sinal(D.attr[a.id])}</span></td>
+        <td class="c"><span class="mod${D.attr[a.id] < 0 ? ' neg' : ''}" data-d="attr.${a.id}" data-fmt="sinal"${modTitulo(a.id)}>${sinal(D.attr[a.id])}</span></td>
       </tr>`).join('');
 
     const atributos = `
@@ -700,7 +709,7 @@
     const slots = F.pericias.map((p, i) => {
       const slot = D.periciaSlots[i];
       const sel = campo(`Perícia ${i + 1} · nível ${NIVEIS_PERICIA[i]}${F.nivel < NIVEIS_PERICIA[i] ? ' (bloqueada)' : ''}`,
-        `<select data-k="pericias.${i}" data-r>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`);
+        `<select data-k="pericias.${i}" data-r${F.nivel < NIVEIS_PERICIA[i] ? ' disabled' : ''}>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`);
       const escs = slot ? slot.escolhas.map((e) => `<select data-k="periciasEsc.${i}.${e.key}" data-r aria-label="Escolha da perícia ${i + 1}">${e.ops.map((o) => opt(o[0], o[1], e.sel)).join('')}</select>`).join('') : '';
       const txt = slot ? fmtBonus(slot.b) : '';
       return `<div class="pilha" style="gap:6px">${sel}${escs}${txt ? `<span class="sub">${slot.k}ª vez: ${txt}</span>` : ''}</div>`;
@@ -713,20 +722,35 @@
         <ol class="sub" style="margin:0;padding-left:20px">${p.niveis.slice(0, c).map((t) => `<li>${esc(t)}</li>`).join('')}</ol>
       </div></div>`;
     }).join('');
-    const talPerOpts = [];
-    Object.keys(D.periciaCont).forEach((id) => { const p = R.PERICIAS.find((x) => x.id === id); (p ? p.talentos : []).forEach(([n, c]) => talPerOpts.push(opt(`${n}|${c}`, `${n} (${c}) · ${p.nome.replace('Perícia ', '')}`))); });
+    // Pontos só existem a partir da 2ª vez de uma perícia; servem para talentos dela
+    // ou para talentos iniciais de até 4 pontos.
+    const restante = D.pontosPericia - D.pontosPericiaGastos;
+    const grupos = [];
+    Object.entries(D.periciaCont).filter(([id, c]) => c >= 2 && id !== 'jiongu').forEach(([id]) => {
+      const p = R.PERICIAS.find((x) => x.id === id);
+      const ops = p.talentos.filter(([n, c]) => !temTalento(n) && custoMin(c) <= restante).map(([n, c]) => opt(`p|${n}`, `${n} (${c})`));
+      if (ops.length) grupos.push(`<optgroup label="${esc(p.nome)}">${ops.join('')}</optgroup>`);
+    });
+    if (D.pontosPericia) {
+      const ops = R.TALENTOS.filter((t) => custoMin(t.pc) <= 4 && custoMin(t.pc) <= restante && !temTalento(t.nome)).map((t) => opt(`i|${t.nome}`, `${t.nome} (${t.pc})`));
+      if (ops.length) grupos.push(`<optgroup label="Talentos iniciais (até 4 pontos)">${ops.join('')}</optgroup>`);
+    }
+    const addTalPer = grupos.length
+      ? `<select id="addTalPer" aria-label="Adicionar talento de perícia"><option value="">+ Adicionar talento de perícia…</option>${grupos.join('')}</select>`
+      : `<select disabled aria-label="Adicionar talento de perícia"><option>${D.pontosPericia ? 'Sem pontos de perícia disponíveis' : 'Liberado na 2ª vez de uma perícia'}</option></select>`;
     const pericias = `
     <section class="painel c6">
-      <div class="painel-topo"><h2>Perícias</h2><span class="extra">Até 4, repetidas ou não</span></div>
+      <div class="painel-topo"><h2>Perícias</h2></div>
       <div class="campos">${slots}</div>
       <div class="lista">${resumo || '<div class="vazio">Nenhuma perícia escolhida.</div>'}</div>
       <div class="painel-topo"><span class="rotulo">Talentos de perícia</span><span class="extra">Pontos: <b class="num">${D.pontosPericiaGastos}</b> de ${D.pontosPericia}</span></div>
       <div class="lista">${F.talentosPericia.map((t, i) => {
         let desc = ''; R.PERICIAS.forEach((p) => p.talentos.forEach(([n, , d]) => { if (n === t.nome) desc = d; }));
-        return `<div class="item"><div class="item-corpo"><div class="item-linha"><span class="item-nome">${esc(t.nome)}</span><label class="linha sub">pts ${numInp(`talentosPericia.${i}.pts`, t.pts, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalPer" data-i="${i}" aria-label="Remover">×</button></div><p class="sub">${esc(desc)}</p></div></div>`;
+        if (t.origem === 'inicial') desc = (R.TALENTOS.find((x) => x.nome === t.nome) || {}).desc || desc;
+        return `<div class="item"><div class="item-corpo"><div class="item-linha"><span class="item-nome">${esc(t.nome)}</span>${t.origem === 'inicial' ? '<span class="tag">Talento inicial</span>' : ''}<label class="linha sub">pts ${numInp(`talentosPericia.${i}.pts`, t.pts, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalPer" data-i="${i}" aria-label="Remover">×</button></div><p class="sub">${esc(desc)}</p></div></div>`;
       }).join('')}</div>
-      ${talPerOpts.length ? `<select id="addTalPer" aria-label="Adicionar talento de perícia"><option value="">+ Adicionar talento de perícia…</option>${talPerOpts.join('')}</select>` : ''}
-      <p class="sub">No 2º e 4º nível de cada perícia o ninja ganha 4 pontos, gastos na hora em talentos daquela perícia ou da tabela de talentos do nível 1.</p>
+      ${restante < 0 ? '<div class="aviso">Os talentos passaram dos pontos de perícia disponíveis.</div>' : ''}
+      ${addTalPer}
     </section>`;
 
     const upgrades = `
@@ -1211,7 +1235,14 @@
     const el = e.target;
     if (el.id === 'addInata' && el.value) { F.inatas.push(el.value); salvar(); render(); return; }
     if (el.id === 'addTalento' && el.value) { const t = R.TALENTOS.find((x) => x.nome === el.value); F.talentos.push({ nome: t.nome, pc: parseInt(t.pc, 10) || 0 }); salvar(); render(); return; }
-    if (el.id === 'addTalPer' && el.value) { const [n, c] = el.value.split('|'); F.talentosPericia.push({ nome: n, pts: parseInt(c, 10) || 0 }); salvar(); render(); return; }
+    if (el.id === 'addTalPer' && el.value) {
+      const [tipo, nome] = [el.value.slice(0, 1), el.value.slice(2)];
+      let custo = '0';
+      if (tipo === 'i') custo = (R.TALENTOS.find((t) => t.nome === nome) || {}).pc;
+      else R.PERICIAS.forEach((p) => p.talentos.forEach(([n, c]) => { if (n === nome) custo = c; }));
+      F.talentosPericia.push({ nome, pts: custoMin(custo), origem: tipo === 'i' ? 'inicial' : 'pericia' });
+      salvar(); render(); return;
+    }
     if (el.id === 'jRank') { ui.jrank = el.value; render(); return; }
     if (el.id === 'catCat') { ui.cat.cat = el.value; ui.cat.lim = 40; renderCatalogo(); return; }
     if (el.id === 'catRank') { ui.cat.rank = el.value; ui.cat.lim = 40; renderCatalogo(); return; }

@@ -41,6 +41,8 @@ A ficha abre com um personagem de exemplo. Em **Fichas** dá para criar novas fi
 - **Descanso curto**: 1 dado de vida e chakra (3 a partir do nível 10, 6 no nível 20; o dobro com a 3ª perícia de Resistência). **Descanso longo**: recupera tudo e tira 20 de cegueira.
 
 - **Perícias**: escolhidas na aba Evolução, entram sozinhas na Ficha (vida, chakra, regeneração, deslocamento, carregamento, arremesso, nível do soco e atributos). Só contam as vagas já liberadas pelo nível (4, 9, 14 e 19). Quando a regra dá opção (ex.: +10 de chakra ou mais um elemento; +1 em Carisma, Constituição ou Inteligência), a escolha aparece embaixo da perícia.
+- **Nível 20**: +1 em todos os atributos e mais +1 no atributo escolhido na caixa que aparece embaixo do Nível.
+- **Talentos de perícia**: liberados quando uma perícia é obtida pela 2ª vez (e de novo na 4ª), com 4 pontos cada. Os pontos compram talentos daquela perícia ou talentos iniciais de até 4 pontos.
 - **Soco**: nível base escolhido + níveis da perícia de Taijutsu, limitado a 2d6 (nível 4) até a 2ª perícia de Taijutsu.
 
 Talentos de valor variável e técnicas ativas como Byakugan e Sharingan entram à mão em “Bônus extras” e “Bônus em todas as DN”.

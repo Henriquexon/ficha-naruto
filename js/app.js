@@ -338,18 +338,6 @@
     if (D.n20[id]) partes.push(`${sinal(D.n20[id])} do nível 20`);
     return partes.length ? ` title="Inclui ${partes.join(' e ')}"` : '';
   }
-  function fmtBonus(b) {
-    const out = [];
-    if (b.vida) out.push(`+${b.vida} vida`);
-    if (b.chakra) out.push(`+${b.chakra} chakra`);
-    if (b.regen) out.push(`+${b.regen} regeneração`);
-    if (b.desl) out.push(`+${b.desl} deslocamento`);
-    if (b.carga) out.push(`+${b.carga * 1000} g carregamento`);
-    if (b.arremesso) out.push(`+${b.arremesso} g arremesso`);
-    if (b.soco) out.push(`+${b.soco} nível de soco`);
-    Object.entries(b.attrs || {}).forEach(([a, v]) => { if (v) out.push(`${sinal(v)} ${attrNome(a)}`); });
-    return out.join(', ');
-  }
   const fmtKg = (kg) => (Math.round(num(kg) * 100) / 100).toLocaleString('pt-BR') + ' kg';
 
   // ---------------------------------------------------------------- UI helpers
@@ -374,7 +362,7 @@
       <div class="painel-topo"><h2>Identidade</h2><span class="extra">Rank <b>${D.rank}</b> pelo nível ${F.nivel}</span></div>
       <div class="campos">
         ${campo('Jogador', inp('jogador', F.jogador))}
-        <div class="pilha" style="gap:6px">${campo('Nível', numInp('nivel', F.nivel, 'min="1" max="20" data-r'))}${F.nivel >= 20 ? `<select data-k="nivel20Attr" data-r aria-label="Atributo que recebe o +1 extra do nível 20">${opt('', '+1 do nível 20: escolha…', F.nivel20Attr)}${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.nivel20Attr)).join('')}</select>` : ''}</div>
+        <div class="pilha" style="gap:6px">${campo('Nível', numInp('nivel', F.nivel, 'min="1" max="20" data-r'))}${F.nivel >= 20 ? `<select data-k="nivel20Attr" data-r aria-label="Atributo que recebe o +1 extra do nível 20">${opt('', '+1 extra: escolha', F.nivel20Attr)}${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.nivel20Attr)).join('')}</select>` : ''}</div>
         ${campo('Patente', `<select data-k="patente">${R.PATENTES.map((p) => opt(p, p, F.patente)).join('')}</select>`)}
       </div>
       <div class="campos">
@@ -711,8 +699,7 @@
       const sel = campo(`Perícia ${i + 1} · nível ${NIVEIS_PERICIA[i]}${F.nivel < NIVEIS_PERICIA[i] ? ' (bloqueada)' : ''}`,
         `<select data-k="pericias.${i}" data-r${F.nivel < NIVEIS_PERICIA[i] ? ' disabled' : ''}>${opt('', '—', p)}${R.PERICIAS.filter((x) => !x.soJiongu || F.inatas.includes('jiongu')).map((x) => opt(x.id, x.nome, p)).join('')}</select>`);
       const escs = slot ? slot.escolhas.map((e) => `<select data-k="periciasEsc.${i}.${e.key}" data-r aria-label="Escolha da perícia ${i + 1}">${e.ops.map((o) => opt(o[0], o[1], e.sel)).join('')}</select>`).join('') : '';
-      const txt = slot ? fmtBonus(slot.b) : '';
-      return `<div class="pilha" style="gap:6px">${sel}${escs}${txt ? `<span class="sub">${slot.k}ª vez: ${txt}</span>` : ''}</div>`;
+      return `<div class="pilha" style="gap:6px">${sel}${escs}</div>`;
     }).join('');
     const resumo = Object.entries(D.periciaCont).map(([id, c]) => {
       const p = R.PERICIAS.find((x) => x.id === id); if (!p) return '';

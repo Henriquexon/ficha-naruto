@@ -108,6 +108,8 @@
       return j;
     });
     out.itens = out.itens.map(estruturarItem);
+    out.talentos.forEach((t) => { const d = R.TALENTOS.find((x) => x.nome === t.nome); if (d) t.pc = ajustarCustoTalento(t.pc, d.pc); });
+    out.talentosPericia.forEach((t) => { const c = custoTalentoPericia(t); if (c) t.pts = ajustarCustoTalento(t.pts, c); });
     out.v = 2;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     out.pa = clamp(num(out.pa, 3), 1, 5);
@@ -327,6 +329,32 @@
   }
 
   function temTalento(nome) { return F.talentos.some((t) => t.nome === nome) || F.talentosPericia.some((t) => t.nome === nome); }
+  // Custo de talento: "1-2" vai de 1 em 1, "2-4" de 2 em 2, "4-16" de 4 em 4; "7/6/5/4" é uma das opções; número único é fixo
+  function faixaCusto(txt) {
+    const t = String(txt || '');
+    if (t.includes('/')) return { ops: t.split('/').map(Number).filter((n) => !isNaN(n)).sort((a, b) => a - b) };
+    const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+    return m ? { min: +m[1], max: +m[2], passo: +m[1] } : null;
+  }
+  function ajustarCustoTalento(v, txt) {
+    const f = faixaCusto(txt);
+    if (!f) return parseInt(txt, 10) || 0;
+    if (f.ops) return f.ops.includes(num(v)) ? num(v) : f.ops[0];
+    const c = clamp(num(v, f.min), f.min, f.max);
+    return clamp(f.min + Math.round((c - f.min) / f.passo) * f.passo, f.min, f.max);
+  }
+  const custoTalentoPericia = (t) => {
+    if (t.origem === 'inicial') return (R.TALENTOS.find((x) => x.nome === t.nome) || {}).pc;
+    let c = ''; R.PERICIAS.forEach((p) => p.talentos.forEach(([n, cc]) => { if (n === t.nome) c = cc; }));
+    return c;
+  };
+  // Campo de custo: fixo = só o número; faixa = caixa numérica limitada; opções = caixa de seleção
+  function campoCustoTalento(k, valor, txt, rot) {
+    const f = faixaCusto(txt);
+    if (!f) return `<span class="linha sub">${rot} <b class="num">${esc(valor)}</b></span>`;
+    if (f.ops) return `<label class="linha sub">${rot} <select data-k="${k}" data-r style="width:auto">${f.ops.map((o) => opt(o, o, valor)).join('')}</select></label>`;
+    return `<label class="linha sub">${rot} <input type="number" class="micro" data-k="${k}" data-r data-custo="${esc(txt)}" min="${f.min}" max="${f.max}" step="${f.passo}" value="${esc(valor)}"></label>`;
+  }
   // menor número citado no custo ("1-2" → 1, "7/6/5/4" → 4)
   const custoMin = (c) => { const ns = String(c).match(/\d+/g); return ns ? Math.min(...ns.map(Number)) : 0; };
 
@@ -675,7 +703,7 @@
       <span class="rotulo">Talentos</span>
       <div class="lista">${F.talentos.map((t, i) => { const def = R.TALENTOS.find((x) => x.nome === t.nome) || {}; return `
         <div class="item"><div class="item-corpo">
-          <div class="item-linha"><span class="item-nome">${esc(t.nome)}</span><label class="linha sub">PC ${numInp(`talentos.${i}.pc`, t.pc, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalento" data-i="${i}" aria-label="Remover talento">×</button></div>
+          <div class="item-linha"><span class="item-nome">${esc(t.nome)}</span>${campoCustoTalento(`talentos.${i}.pc`, t.pc, def.pc, 'PC')}<button class="btn-ico" data-acao="remTalento" data-i="${i}" aria-label="Remover talento">×</button></div>
           <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
         </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
       <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
@@ -941,7 +969,7 @@
       <div class="lista">${F.talentosPericia.map((t, i) => {
         let desc = ''; R.PERICIAS.forEach((p) => p.talentos.forEach(([n, , d]) => { if (n === t.nome) desc = d; }));
         if (t.origem === 'inicial') desc = (R.TALENTOS.find((x) => x.nome === t.nome) || {}).desc || desc;
-        return `<div class="item"><div class="item-corpo"><div class="item-linha"><span class="item-nome">${esc(t.nome)}</span>${t.origem === 'inicial' ? '<span class="tag">Talento inicial</span>' : ''}<label class="linha sub">pts ${numInp(`talentosPericia.${i}.pts`, t.pts, 'class="micro" min="0" data-r')}</label><button class="btn-ico" data-acao="remTalPer" data-i="${i}" aria-label="Remover">×</button></div><p class="sub">${esc(desc)}</p></div></div>`;
+        return `<div class="item"><div class="item-corpo"><div class="item-linha"><span class="item-nome">${esc(t.nome)}</span>${t.origem === 'inicial' ? '<span class="tag">Talento inicial</span>' : ''}${campoCustoTalento(`talentosPericia.${i}.pts`, t.pts, custoTalentoPericia(t), 'pts')}<button class="btn-ico" data-acao="remTalPer" data-i="${i}" aria-label="Remover">×</button></div><p class="sub">${esc(desc)}</p></div></div>`;
       }).join('')}</div>
       ${restante < 0 ? '<div class="aviso">Os talentos passaram dos pontos de perícia disponíveis.</div>' : ''}
       ${addTalPer}
@@ -1118,13 +1146,13 @@
         <div class="tabela-wrap"><table>
           <thead><tr><th>Portão</th><th class="c">Aprendido</th><th class="c">Custo treinado</th><th class="c">Treinos p/ penalidade</th><th class="c">Aberto</th></tr></thead>
           <tbody>${R.PORTOES.map((p, i) => `<tr>
-            <td><div class="attr-nome">${esc(p[0])}</div><div class="attr-desc">${esc(p[1])} · ${esc(p[2])}<br><b>Penalidade:</b> ${esc(p[3])} <b>Descanso:</b> ${esc(p[4])}</div></td>
+            <td><div class="attr-nome">${esc(p[0])}</div><div class="attr-desc">${esc(p[1].replace(/\s*\(\d+\)/, ''))} · ${esc(p[2])}</div></td>
             <td class="c"><input type="checkbox" data-k="portoes.${i}.aprendido" data-r ${F.portoes[i].aprendido ? 'checked' : ''} aria-label="Aprendido"></td>
             <td class="c">${i < 7 ? `<input type="checkbox" data-k="portoes.${i}.treinado" data-r ${F.portoes[i].treinado ? 'checked' : ''} aria-label="Custo reduzido por treino">` : '—'}</td>
             <td class="c">${i < 7 ? `<select data-k="portoes.${i}.penal" data-r style="width:auto">${[0, 1, 2].map((v) => opt(v, v === 2 ? '2 (retirada)' : String(v), F.portoes[i].penal)).join('')}</select>` : '—'}</td>
             <td class="c"><input type="checkbox" data-k="portoes.${i}.ativo" data-r ${F.portoes[i].ativo ? 'checked' : ''} aria-label="Aberto"></td>
           </tr>`).join('')}</tbody></table></div>
-        <p class="sub">Tudo é cumulativo. Abrir cada portão custa 1 PA e exige o anterior aberto. Requer a 1ª perícia de Taijutsu. Um portão nunca custa menos de 1 de vida por turno; a penalidade do 8º não pode ser retirada.</p>
+        <p class="sub">Tudo é cumulativo. Abrir cada portão custa 1 PA e exige o anterior aberto.</p>
       </div>
     </details>`;
 
@@ -1133,7 +1161,7 @@
       <summary><h2>Jashin</h2><span class="sub">${F.jashin ? `${F.jashin} desvantagem(ns)` : 'Em dia com o culto'}</span></summary>
       <div class="modulo-corpo">
         <ol class="sub" style="margin:0;padding-left:20px">${R.JASHIN_PENALIDADES.map((t, i) => `<li style="${i < F.jashin ? 'color:var(--seal);font-weight:700' : ''}">${esc(t)}</li>`).join('')}</ol>
-        <div class="linha"><button class="btn peq" data-acao="jashin" data-v2="1">Descanso longo sem sacrifício (+1)</button><button class="btn peq" data-acao="jashin" data-v2="0">Sacrifício realizado (reiniciar)</button></div>
+        <div class="linha"><button class="btn peq" data-acao="jashin" data-v2="1">Descanso longo sem sacrifício (+1)</button><button class="btn peq" data-acao="jashin" data-v2="-1">Sacrifício realizado (−1)</button></div>
         <p class="sub">Sempre que a vida chegar a zero, o ninja a recupera completamente e recebe mais uma desvantagem. O chakra nunca fica abaixo de 1.</p>
       </div>
     </details>`;
@@ -1364,7 +1392,7 @@
     remMario(el) { F.marionetes.splice(+el.dataset.i, 1); return true; },
     remCompon(el) { F.marionetes[+el.dataset.i].componentes.splice(+el.dataset.ci, 1); return true; },
     cegueira(el) { F.sharingan.cegueira = clamp(num(F.sharingan.cegueira) + Number(el.dataset.v2), 0, 100); return true; },
-    jashin(el) { F.jashin = el.dataset.v2 === '0' ? 0 : clamp(F.jashin + 1, 0, 5); return true; },
+    jashin(el) { F.jashin = clamp(num(F.jashin) + Number(el.dataset.v2), 0, 5); return true; },
     addMascara() { F.mascaras.push({ el: 'katon', pv: 4 * F.nivel, ck: 4 * F.nivel, notas: '' }); return true; },
     remMascara(el) { F.mascaras.splice(+el.dataset.i, 1); return true; },
     addTreino(el) { F.treinos.push({ desc: '', pts: Number(el.dataset.pts) }); return true; },
@@ -1407,6 +1435,8 @@
     else v = el.value;
     if (k === 'nivel') v = clamp(num(v, 1), 1, 20);
     if (/^jutsus\.\d+\.aprim$/.test(k)) { v = clamp(num(v), 0, 6); el.value = v; }
+    if (el.dataset.custo) { v = ajustarCustoTalento(v, el.dataset.custo); el.value = v; }
+    if (/^talentos(Pericia)?\.\d+\.(pc|pts)$/.test(k) && el.tagName === 'SELECT') v = num(v);
     if (k === 'pa' && el.value !== '') { v = clamp(num(v, 3), 1, D.paMax); el.value = v; }
     setPath(F, k, v);
     salvar();
@@ -1421,6 +1451,7 @@
     if (!el.dataset || !el.dataset.k) return;
     if (el.tagName === 'SELECT' || el.type === 'checkbox') return; // tratados em change
     if (el.classList.contains('so-digitos') && /\D/.test(el.value)) el.value = el.value.replace(/\D/g, '');
+    if (el.dataset.custo) return; // custo de talento: ajustado no change
     const re = aplicarCampo(el);
     if (re && el.type !== 'number') render(); else atualizarDerivados();
   });
@@ -1428,7 +1459,7 @@
   document.addEventListener('change', (e) => {
     const el = e.target;
     if (el.id === 'addInata' && el.value) { F.inatas.push(el.value); salvar(); render(); return; }
-    if (el.id === 'addTalento' && el.value) { const t = R.TALENTOS.find((x) => x.nome === el.value); F.talentos.push({ nome: t.nome, pc: parseInt(t.pc, 10) || 0 }); salvar(); render(); return; }
+    if (el.id === 'addTalento' && el.value) { const t = R.TALENTOS.find((x) => x.nome === el.value); F.talentos.push({ nome: t.nome, pc: ajustarCustoTalento(custoMin(t.pc), t.pc) }); salvar(); render(); return; }
     if (el.id === 'addTalPer' && el.value) {
       const [tipo, nome] = [el.value.slice(0, 1), el.value.slice(2)];
       let custo = '0';

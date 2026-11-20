@@ -38,7 +38,7 @@ A ficha abre com um personagem de exemplo. Em **Fichas** dá para criar novas fi
 - **Atributos**: `−1 + clã + pontos distribuídos + classe + perícias`. O custo da distribuição segue a tabela da criação (passar de 1 para 2 custa 2).
 - **Vida máxima**: `nível × (vida por nível da classe + extra do clã + Cons/2 arredondado para baixo) + extras`. Constituição negativa entra inteira por nível. Hoozuki usa 6/6 por nível; Senju e Uzumaki somam o extra por nível.
 - **Chakra máximo**: `nível × (chakra por nível da classe + extra do clã) + extras`, metade com o talento Mestre em Taijutsu, menos o custo do selo da bijuu (2/3/4 por nível, mínimo 2) enquanto não houver laço de amizade.
-- **DN**: Taijutsu 6 + Tai · Ninjutsu 8 + Nin · Constituição 10 + Cons · Destreza 6 + Des · Genjutsu 8 + Gen · Contra-ataque 4 + atributo escolhido · Inteligência = percepção passiva.
+- **DN**: Taijutsu 6 + Tai · Ninjutsu 8 + Nin · Constituição 10 + Cons · Destreza 6 + Des · Genjutsu 8 + Gen · Contra-ataque 4 + atributo da técnica ofensiva com dano (Ninjutsu, Ninjutsu Elemental e Fuuijutsu usam Nin, Taijutsu usa Tai, Genjutsu usa Gen e Kenjutsu usa Des) · Inteligência = percepção passiva.
 - **Rank** pelo nível: D (1–4), C (5–9), B (10–14), A (15–19), S (20).
 - **Descanso curto**: 1 dado de vida e chakra (3 a partir do nível 10, 6 no nível 20; o dobro com a 3ª perícia de Resistência). **Descanso longo**: recupera tudo e tira 20 de cegueira.
 

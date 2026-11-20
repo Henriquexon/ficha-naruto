@@ -13,7 +13,11 @@
   const ALCANCES = ['-', 'Corpo-a-Corpo', 'Curto', 'Médio', 'Longo'];
   const AREAS = ['-', 'Pequeno', 'Grande'];
   const APRENDIZADOS = ['C', 'I', 'T', 'D'];
-  const TIPOS_JUTSU = ['Ninjutsu', 'Taijutsu', 'Kenjutsu', 'Genjutsu'];
+  const ATRIBUTO_TECNICA = {
+    Ninjutsu: 'nin', 'Ninjutsu Elemental': 'nin', Fuuijutsu: 'nin',
+    Taijutsu: 'tai', Kenjutsu: 'des', Genjutsu: 'gen',
+  };
+  const TIPOS_JUTSU = Object.keys(ATRIBUTO_TECNICA);
   const NIVEIS_PERICIA = [4, 9, 14, 19];
   const NIVEIS_UPGRADE = [5, 10, 15, 20];
   const NIVEIS_COMPRA = [1, 2, 4, 7, 9, 12, 14, 17, 19, 20];
@@ -48,13 +52,13 @@
     const attrs = {};
     R.ATRIBUTOS.forEach((a) => { attrs[a.id] = { pts: 0 }; });
     return {
-      v: 2, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
+      v: 3, id: uid(), nome: '', jogador: '', nivel: 1, patente: 'Gennin',
       cla: 'sem', claEscolha: 'nin', classe: 'equilibrado', classeEscolhas: [], nivel20Attr: '',
       inatas: [], elementos: [], attrs,
       bonus: { vida: 0, chakra: 0, regen: 0, desl: 0, carga: 0, arremesso: 0, dn: 0 },
       pvAtual: null, chakraAtual: null, sobrevida: 0, sobrechakra: 0, protagonismo: null,
       morte: { v: 0, d: 0 }, condicoes: {}, pa: 3, soco: 1,
-      dn: { nin: '', nin2: '', nin3: '', gen: '', gen2: '', contra: '', contraAttr: 'tai' },
+      dn: { nin: '', nin2: '', nin3: '', gen: '', gen2: '', contra: '' },
       esp: {}, pericias: ['', '', '', ''], periciasEsc: [{}, {}, {}, {}], talentosPericia: [], talentos: [],
       upgrades: { 5: '', 10: '', 15: '', 20: '' },
       jutsus: [], itens: [], ryo: 0, companheiros: [], marionetes: [],
@@ -99,7 +103,8 @@
         const soltos = fora.filter((r) => !reqsDe(r).exato);
         if (soltos.length) j.notas = [`Requerimentos: ${soltos.join(', ')}`, j.notas].filter(Boolean).join('\n');
       }
-      if (!j.tipo) j.tipo = TIPO_CAT[j.cat] || '';
+      const tipoCatalogo = TIPO_CAT[j.cat] || '';
+      if (!j.tipo || (!(f.v >= 3) && j.tipo === 'Ninjutsu' && ['Ninjutsu Elemental', 'Fuuijutsu'].includes(tipoCatalogo))) j.tipo = tipoCatalogo;
       estruturarDano(j);
       marcarJutsu(j);
       if (!j.estilo) j.porTurno = custoDoLivroPorTurno(j);
@@ -107,10 +112,15 @@
       j.aprim = clamp(num(j.aprim), 0, 6);
       return j;
     });
+    if (!f || !(f.v >= 3)) {
+      const antiga = out.jutsus.find((j) => j.n === out.dn.contra && podeContraAtacar(j));
+      out.dn.contra = antiga ? antiga.id : '';
+      delete out.dn.contraAttr;
+    }
     out.itens = out.itens.map(estruturarItem);
     out.talentos.forEach((t) => { const d = R.TALENTOS.find((x) => x.nome === t.nome); if (d) t.pc = ajustarCustoTalento(t.pc, d.pc); });
     out.talentosPericia.forEach((t) => { const c = custoTalentoPericia(t); if (c) t.pts = ajustarCustoTalento(t.pts, c); });
-    out.v = 2;
+    out.v = 3;
     out.nivel = clamp(num(out.nivel, 1), 1, 20);
     out.pa = clamp(num(out.pa, 3), 1, 5);
     if (out.patente === 'ANBU') out.patente = 'Anbu';
@@ -128,7 +138,7 @@
     f.pericias = ['ninjutsu', '', '', ''];
     f.periciasEsc[0] = { g0: 'chakra' };
     f.esp = { percepcao: { on: true }, furtividade: { on: false } };
-    f.dn = { nin: 'Kawarimi no Jutsu (Técnica de Substituição de Corpo)', gen: '', contra: '', contraAttr: 'tai' };
+    f.dn = { nin: 'Kawarimi no Jutsu (Técnica de Substituição de Corpo)', gen: '', contra: '' };
     f.upgrades[5] = 'Exemplo: aprimoramento do Goukakyuu no Jutsu.';
     const pega = (nome) => CAT_J.find((j) => j.n.startsWith(nome));
     ['Goukakyuu no Jutsu', 'Kawarimi no Jutsu', 'Shunshin no Jutsu', 'Bunshin no Jutsu', 'Sharingan']
@@ -160,7 +170,16 @@
       exato: !r || r === '-' || /^(corpo-a-corpo|curto|m[eé]dio|longo)?(;?\s*[aá]rea\s+(pequena|grande))?$/i.test(r),
     };
   }
-  const TIPO_CAT = { NINJUTSUS: 'Ninjutsu', TAIJUTSUS: 'Taijutsu', KENJUTSUS: 'Kenjutsu', GENJUTSUS: 'Genjutsu' };
+  const TIPO_CAT = {
+    NINJUTSUS: 'Ninjutsu', TAIJUTSUS: 'Taijutsu', KENJUTSUS: 'Kenjutsu', GENJUTSUS: 'Genjutsu',
+    KATON: 'Ninjutsu Elemental', SUITON: 'Ninjutsu Elemental', DOTON: 'Ninjutsu Elemental',
+    FUUTON: 'Ninjutsu Elemental', RAITON: 'Ninjutsu Elemental', FUUINJUTSUS: 'Fuuijutsu',
+  };
+  function podeContraAtacar(j) {
+    if (!TIPOS_JUTSU.includes(j.tipo) || j.defesa || j.defesaExtra) return false;
+    if (j.danoTipo === 'd') return num(j.danoQtd) > 0 && num(j.danoFaces) > 0;
+    return /^(?:[1-9]\d*|dano da arma|dano do jutsu inimigo\.?|\d+ níveis de soco abaixo do usuário)$/i.test(String(j.dano || '').trim());
+  }
   // Converte os campos de texto do livro para as caixas da ficha. O que não couber
   // exatamente nas opções fica registrado em "Anotações" como "No livro: …".
   function estruturarJutsu(j) {
@@ -438,9 +457,11 @@
     D.carga = Math.max(0, 2.5 + A.cons) + num(F.bonus.carga) + PB.carga;
     D.arremesso = 500 + num(F.bonus.arremesso) + PB.arremesso;
     const b = num(F.bonus.dn);
+    const contra = F.jutsus.find((j) => j.id === F.dn.contra && podeContraAtacar(j));
+    D.atributoContra = contra ? ATRIBUTO_TECNICA[contra.tipo] : '';
     D.dn = {
       tai: 6 + A.tai + b, nin: 8 + A.nin + b, cons: 10 + A.cons + b, des: 6 + A.des + b,
-      gen: 8 + A.gen + b, contra: 4 + (A[F.dn.contraAttr] || 0) + b, int: D.percepcao + b,
+      gen: 8 + A.gen + b, contra: D.atributoContra ? 4 + A[D.atributoContra] + b : '—', int: D.percepcao + b,
     };
     D.protMax = Math.max(0, A.car);
     D.espQtd = n >= 20 ? 7 : n >= 10 ? 3 : 1;
@@ -546,12 +567,10 @@
     </div></div>`;
   // Técnicas que podem ir em cada DN:
   //  Ninjutsu: Defesa/Defesa Extra do tipo Ninjutsu · Genjutsu: Defesa/Defesa Extra da seção de Genjutsus
-  //  contra-ataque: técnicas sem Defesa nem Defesa Extra
   const eDefesa = (j) => j.defesa || j.defesaExtra;
   const FILTRO_DN = {
-    nin: (j) => eDefesa(j) && j.tipo === 'Ninjutsu',
+    nin: (j) => eDefesa(j) && ATRIBUTO_TECNICA[j.tipo] === 'nin',
     gen: (j) => eDefesa(j) && j.tipo === 'Genjutsu',
-    contra: (j) => !eDefesa(j),
   };
   const tecnicaDN = (k, val, filtro) => {
     const nomes = [...new Set(F.jutsus.filter(FILTRO_DN[filtro]).map((j) => j.n).filter(Boolean))];
@@ -636,12 +655,12 @@
         ${dnCard('des', 'Destreza', '6 + Des')}
         ${dnCard('gen', 'Genjutsu', '8 + Gen')}
         ${dnCard('int', 'Inteligência', '= percepção passiva')}
-        ${dnCard('contra', 'Contra-ataque', `4 + <select data-k="dn.contraAttr" data-r aria-label="Atributo do contra-ataque" style="width:auto;padding:1px 4px">${R.ATRIBUTOS.map((a) => opt(a.id, attrCurto[a.id], F.dn.contraAttr)).join('')}</select>`)}
+        ${dnCard('contra', 'Contra-ataque', D.atributoContra ? `4 + ${attrNome(D.atributoContra)}` : '—')}
       </div>
       <div class="campos campos-base">
         ${vagasDN('nin', 'Técnica na DN de Ninjutsu', D.vagasDnNin, 'nin')}
         ${vagasDN('gen', 'Técnica na DN de Genjutsu', D.vagasDnGen, 'gen')}
-        ${campo('Técnica de contra-ataque', tecnicaDN('dn.contra', F.dn.contra, 'contra'))}
+        ${campo('Técnica de contra-ataque', `<select data-k="dn.contra" data-r>${opt('', '—', F.dn.contra)}${F.jutsus.filter(podeContraAtacar).map((j) => opt(j.id, j.n, F.dn.contra)).join('')}</select>`)}
         ${campo('Bônus em todas as DN', numInp('bonus.dn', F.bonus.dn))}
       </div>
     </section>`;

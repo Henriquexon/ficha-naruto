@@ -518,3 +518,11 @@ details.modulo > .modulo-corpo { padding: 0 16px 16px; display: grid; gap: 12px;
   .tab-attr .attr-nome { font-size: .85rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.treino-parametros, .treino-acao {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.treino-acao { grid-template-columns: minmax(0, 1fr) 6em auto; }

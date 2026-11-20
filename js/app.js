@@ -66,7 +66,7 @@
       sharingan: { nivel: 0, cegueira: 0 },
       portoes: R.PORTOES.map(() => ({ aprendido: false, treinado: false, penal: 0, ativo: false })),
       jashin: 0, mascaras: [],
-      treinos: [], treinoCalc: { dur: 'curto', rank: '' },
+      treinos: [], treinoCalc: { dur: 'curto', rank: '', acoes: [], editar: null },
       alinhamento: '', ideal: '', fraqueza: '', vinculo: '', historia: '', notas: '',
     };
   }
@@ -962,6 +962,17 @@
   }
 
   // ---------------------------------------------------------------- ABA: Evolução
+  const DURACOES_TREINO = { curto: 'Curto', medio: 'Médio', longo: 'Longo' };
+
+  function resumoTreino() {
+    const tc = F.treinoCalc;
+    const rank = tc.rank || D.rank;
+    const inteligencia = tc.inteligencia ?? D.attr.int;
+    const total = R.PONTOS_TREINO[clamp(inteligencia, -2, 5)][tc.dur][R.RANKS.indexOf(rank)];
+    const gasto = tc.acoes.reduce((n, a) => n + num(a.pts), 0);
+    return { rank, inteligencia, total, saldo: total - gasto };
+  }
+
   function abaEvolucao() {
 
     const slots = F.pericias.map((p, i) => {
@@ -1017,20 +1028,33 @@
     </section>`;
 
     const tc = F.treinoCalc;
-    const rankT = tc.rank || D.rank;
-    const intK = String(clamp(D.attr.int, -2, 5));
-    const pontos = R.PONTOS_TREINO[intK][tc.dur][R.RANKS.indexOf(rankT)];
+    const treino = resumoTreino();
+    const antigo = tc.editar !== null && !F.treinos[tc.editar]?.acoes;
     const treinos = `
-    <section class="painel c5">
-      <div class="painel-topo"><h2>Treinos</h2><span class="extra">Int ${sinal(D.attr.int)}</span></div>
-      <div class="campos">
-        ${campo('Duração', `<select data-k="treinoCalc.dur" data-r>${opt('curto', 'Curto (semanas)', tc.dur)}${opt('medio', 'Médio (meses)', tc.dur)}${opt('longo', 'Longo (anos)', tc.dur)}</select>`)}
-        ${campo('Rank', `<select data-k="treinoCalc.rank" data-r>${opt('', `Atual (${D.rank})`, tc.rank)}${R.RANKS.map((r) => opt(r, r, tc.rank)).join('')}</select>`)}
-        ${stat('Pontos de treino', pontos)}
+    <section class="painel c12">
+      <div class="painel-topo"><h2>Treinos</h2></div>
+      <div class="treino-parametros">
+        ${antigo ? '' : campo('Duração', `<select data-k="treinoCalc.dur" data-r>${Object.entries(DURACOES_TREINO).map(([k, nome]) => opt(k, nome, tc.dur)).join('')}</select>`)}
+        ${antigo ? '' : campo('Rank do treino', `<select data-k="treinoCalc.rank" data-r>${R.RANKS.map((r) => opt(r, r, treino.rank)).join('')}</select>`)}
+        ${antigo ? '' : stat('Pontos de treino', `<output id="saldoTreino" aria-live="polite">${treino.saldo}</output>`, `de ${treino.total} PT`)}
       </div>
-      <span class="rotulo">Registro</span>
-      <div class="lista">${F.treinos.map((t, i) => `<div class="linha">${inp(`treinos.${i}.desc`, t.desc, 'placeholder="O que foi feito" style="flex:1 1 200px"')}${numInp(`treinos.${i}.pts`, t.pts, 'class="mini" aria-label="Pontos"')}<button class="btn-ico" data-acao="remTreino" data-i="${i}" aria-label="Remover">×</button></div>`).join('')}</div>
-      <div class="linha"><button class="btn peq" data-acao="addTreino" data-pts="${pontos}">Registrar treino (${pontos} pts)</button></div>
+      <div class="lista">${tc.acoes.map((acao, i) => `<div class="treino-acao">
+        ${campo('O que foi feito', inp(`treinoCalc.acoes.${i}.desc`, acao.desc))}
+        ${campo('PT gastos', numInp(`treinoCalc.acoes.${i}.pts`, acao.pts, 'min="0" step="1"'))}
+        ${antigo ? '' : `<button class="btn-ico" data-acao="remAcaoTreino" data-i="${i}" aria-label="Remover ação">×</button>`}
+      </div>`).join('')}</div>
+      <div class="linha">
+        ${antigo ? '' : '<button class="btn" data-acao="addAcaoTreino">Adicionar ação</button>'}
+        <button class="btn primario" data-acao="registrarTreino">${tc.editar === null ? 'Registrar Treino' : 'Salvar alterações'}</button>
+        ${tc.editar === null && !tc.acoes.length ? '' : '<button class="btn" data-acao="cancelarTreino">Cancelar</button>'}
+      </div>
+      <div class="lista">${F.treinos.map((t,i) => `<article class="item"><div class="item-corpo">
+        <div class="item-linha"><strong>${t.acoes ? `Treino ${esc(DURACOES_TREINO[t.dur])} · Rank ${esc(t.rank)}` : 'Treino anterior'}</strong>
+          <span class="linha"><button class="btn-ico" data-acao="editarTreino" data-i="${i}" aria-label="Editar treino ${i+1}" title="Editar treino">⚙</button>
+          <button class="btn-ico" data-acao="remTreino" data-i="${i}" aria-label="Remover treino ${i+1}">×</button></span></div>
+        <ul>${(t.acoes || [t]).map((acao) => `<li>${esc(acao.desc)} · ${num(acao.pts)} PT</li>`).join('')}</ul>
+        ${t.acoes ? `<span class="sub">${t.acoes.reduce((n,x) => n + num(x.pts), 0)} de ${num(t.total)} PT gastos</span>` : ''}
+      </div></article>`).join('')}</div>
       <details class="item"><summary><span class="item-linha"><span class="item-nome">Tabela de treino</span><span class="sub">custos</span></span></summary>
         <div class="item-corpo tabela-wrap"><table><thead><tr><th>Atividade</th><th class="c">Pontos</th><th>Benefício</th></tr></thead><tbody>
         ${R.TABELA_TREINO.map(([a, p, b]) => `<tr><td>${esc(a)}</td><td class="c num">${p}</td><td class="sub">${esc(b)}</td></tr>`).join('')}
@@ -1039,14 +1063,14 @@
     </section>`;
 
     const escal = `
-    <section class="painel c7">
+    <section class="painel c12">
       <div class="painel-topo"><h2>Escalonamento de nível</h2><span class="extra">Nível atual destacado</span></div>
       <div class="tabela-wrap"><table class="nivel-tab"><tbody>
         ${Object.entries(R.ESCALONAMENTO).map(([lv, t]) => `<tr class="${Number(lv) === F.nivel ? 'atual' : Number(lv) < F.nivel ? 'passado' : ''}"><td>${lv}</td><td>${esc(t) || '—'}</td></tr>`).join('')}
       </tbody></table></div>
     </section>`;
 
-    return `<div class="grade">${pericias}${upgrades}${treinos}${escal}</div>`;
+    return `<div class="grade">${escal}${pericias}${upgrades}${treinos}</div>`;
   }
 
   // ---------------------------------------------------------------- ABA: Aliados
@@ -1434,8 +1458,44 @@
     jashin(el) { F.jashin = clamp(num(F.jashin) + Number(el.dataset.v2), 0, 5); return true; },
     addMascara() { F.mascaras.push({ el: 'katon', pv: 4 * F.nivel, ck: 4 * F.nivel, notas: '' }); return true; },
     remMascara(el) { F.mascaras.splice(+el.dataset.i, 1); return true; },
-    addTreino(el) { F.treinos.push({ desc: '', pts: Number(el.dataset.pts) }); return true; },
-    remTreino(el) { F.treinos.splice(+el.dataset.i, 1); return true; },
+    addAcaoTreino() {
+      const tc = F.treinoCalc;
+      tc.rank ||= D.rank;
+      tc.inteligencia ??= D.attr.int;
+      tc.acoes.push({ desc: '', pts: 0 });
+      return true;
+    },
+    remAcaoTreino(el) { F.treinoCalc.acoes.splice(+el.dataset.i, 1); return true; },
+    cancelarTreino() { F.treinoCalc = fichaVazia().treinoCalc; return true; },
+    registrarTreino() {
+      const tc = F.treinoCalc;
+      if (!tc.acoes.length || tc.acoes.some(a => !a.desc.trim() || !Number.isSafeInteger(a.pts) || a.pts < 0)) {
+        toast('Preencha a descrição e os pontos de cada ação.'); return;
+      }
+      const { rank, inteligencia, total, saldo } = resumoTreino();
+      const antigo = tc.editar !== null && !F.treinos[tc.editar]?.acoes;
+      if (!antigo && saldo < 0) { toast('Os pontos gastos ultrapassam o total do treino.'); return; }
+      const registro = antigo ? tc.acoes[0] : { dur: tc.dur, rank, inteligencia, total, acoes: tc.acoes };
+      if (tc.editar === null) F.treinos.push(registro);
+      else F.treinos[tc.editar] = registro;
+      F.treinoCalc = fichaVazia().treinoCalc;
+      return true;
+    },
+    editarTreino(el) {
+      if (F.treinoCalc.acoes.length || F.treinoCalc.editar !== null) {
+        toast('Conclua ou cancele o treino em andamento.'); return;
+      }
+      const i = +el.dataset.i, t = F.treinos[i];
+      F.treinoCalc = { ...fichaVazia().treinoCalc, ...t, editar: i, acoes: (t.acoes || [t]).map(a => ({ ...a })) };
+      return true;
+    },
+    remTreino(el) {
+      const i = +el.dataset.i, tc = F.treinoCalc;
+      F.treinos.splice(i, 1);
+      if (tc.editar === i) F.treinoCalc = fichaVazia().treinoCalc;
+      else if (tc.editar !== null && tc.editar > i) tc.editar--;
+      return true;
+    },
     trocarFicha(el) { db.atual = el.dataset.id; F = db.fichas[db.atual]; salvar(); fecharModal(); render(); },
     novaFicha() { usarFicha(fichaVazia()); toast('Nova ficha criada.'); },
     duplicarFicha() { const c = JSON.parse(JSON.stringify(F)); c.id = uid(); c.nome = (c.nome || 'Ficha') + ' (cópia)'; usarFicha(c); },
@@ -1478,6 +1538,10 @@
     if (/^talentos(Pericia)?\.\d+\.(pc|pts)$/.test(k) && el.tagName === 'SELECT') v = num(v);
     if (k === 'pa' && el.value !== '') { v = clamp(num(v, 3), 1, D.paMax); el.value = v; }
     setPath(F, k, v);
+    if (k.startsWith('treinoCalc.acoes.') && k.endsWith('.pts')) {
+      const saldo = $('#saldoTreino');
+      if (saldo) saldo.textContent = resumoTreino().saldo;
+    }
     salvar();
     return el.hasAttribute('data-r');
   }

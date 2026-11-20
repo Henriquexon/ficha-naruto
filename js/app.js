@@ -718,23 +718,23 @@
         <div class="ajuste">
           <input type="number" id="aj-${tipo}" min="0" placeholder="qtd" aria-label="Quantidade de ${rot.toLowerCase()}">
           <button class="btn peq" data-acao="ajustar" data-alvo="${tipo}" data-s="-1">${tipo === 'vida' ? 'Dano' : 'Gastar'}</button>
-          <button class="btn peq" data-acao="ajustar" data-alvo="${tipo}" data-s="1">${tipo === 'vida' ? 'Curar' : 'Recuperar'}</button>
+          <button class="btn peq" data-acao="ajustar" data-alvo="${tipo}" data-s="1">${tipo === 'vida' ? 'Cura' : 'Recuperar'}</button>
           ${tipo === 'chakra' ? `<button class="btn peq" data-acao="regen" title="Ação de turno inteiro em Concentração">+Regen</button>` : ''}
         </div>
         <label class="linha sub">${sobreRot} ${numInp(sobreK, F[sobreK], 'class="mini" min="0"')}</label>
       </div>`;
     return `
     <section class="painel c5">
-      <div class="painel-topo"><h2>Vitalidade</h2><span class="extra">Descanso curto: ${D.dadosDescanso} dado(s)</span></div>
+      <div class="painel-topo"><h2>Vitalidade</h2><span class="extra">Descanso curto: ${D.dadosDescanso} ${D.dadosDescanso === 1 ? 'dado' : 'dados'} de classe <span aria-hidden="true">🎲</span></span></div>
       <div class="recursos">
         ${recurso('vida', 'Vida', 'pvAtual', 'vidaMax', 'sobrevida', 'Sobrevida')}
         ${recurso('chakra', 'Chakra', 'chakraAtual', 'chakraMax', 'sobrechakra', 'Sobrechakra')}
       </div>
       <div class="pilha">
         <span class="rotulo">Testes contra a morte</span>
-        <div class="linha">
-          <span class="trilha" aria-label="Sucessos">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="v" data-i="${i}" ${F.morte.v >= i ? 'checked' : ''} aria-label="Sucesso ${i}">`).join('')} <span class="sub">sucessos</span></span>
-          <span class="trilha falha" aria-label="Falhas">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="d" data-i="${i}" ${F.morte.d >= i ? 'checked' : ''} aria-label="Falha ${i}">`).join('')} <span class="sub">falhas</span></span>
+        <div class="pilha">
+          <div class="trilha" role="group" aria-label="Sucessos">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="v" data-i="${i}" ${F.morte.v >= i ? 'checked' : ''} aria-label="Sucesso ${i}">`).join('')} <span class="sub">sucessos</span></div>
+          <div class="trilha falha" role="group" aria-label="Falhas">${[1, 2, 3].map((i) => `<input type="checkbox" data-acao="morte" data-t="d" data-i="${i}" ${F.morte.d >= i ? 'checked' : ''} aria-label="Falha ${i}">`).join('')} <span class="sub">falhas</span></div>
         </div>
       </div>
       <div class="pilha"><span class="rotulo">Condições</span><div class="chips">${cond}</div></div>

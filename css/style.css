@@ -368,8 +368,30 @@ tr:last-child td { border-bottom: 0; }
 .ajuste { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ajuste input { width: 70px; text-align: center; }
 .trilha { display: flex; gap: 5px; align-items: center; }
-.trilha input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
-.trilha.falha input[type="checkbox"] { accent-color: var(--seal); }
+.trilha input[type="checkbox"] {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 3px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--rk-d);
+  cursor: pointer;
+}
+.trilha input[type="checkbox"]:checked {
+  border-color: currentColor;
+  background: var(--rk-d-bg);
+}
+.trilha input[type="checkbox"]:checked::before {
+  content: "✓";
+  font: bold 14px/1 system-ui, sans-serif;
+}
+.trilha.falha input[type="checkbox"] { color: var(--seal); }
+.trilha.falha input[type="checkbox"]:checked { background: var(--seal-soft); }
+.trilha.falha input[type="checkbox"]:checked::before { content: "×"; }
 
 /* Listas de cartões (jutsus etc.) */
 .lista { display: grid; gap: 8px; }

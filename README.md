@@ -1,5 +1,7 @@
 # Ficha Ninja · RPG Naruto
 
+[Acessar a Ficha Ninja](https://henriquexon.github.io/ficha-naruto/)
+
 Protótipo de ficha de personagem para o RPG de Naruto criado pelo grupo. É um site estático (HTML, CSS e JavaScript puro, sem build) que roda direto no navegador e salva as fichas no próprio navegador.
 
 Tudo o que aparece na ficha vem dos documentos do sistema:

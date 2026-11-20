@@ -618,7 +618,7 @@
       <div class="pilha">
         <span class="rotulo">Habilidades inatas</span>
         <div class="chips">${F.inatas.map((id) => { const h = R.INATAS.find((x) => x.id === id) || { nome: id }; return `<span class="chip fixo" title="${esc(h.desc)}">${esc(h.nome)}${h.kinjutsu ? ' <span class="tag aviso">Kinjutsu</span>' : ''}<button class="x" data-acao="remInata" data-id="${id}" aria-label="Remover ${esc(h.nome)}">×</button></span>`; }).join('') || '<span class="sub">Nenhuma.</span>'}</div>
-        <select id="addInata" aria-label="Adicionar habilidade inata"><option value="">+ Adicionar habilidade inata…</option>${inataOpts}</select>
+        <select id="addInata" aria-label="Adicionar habilidade inata"><option value="">+ Adicionar Habilidade Inata</option>${inataOpts}</select>
       </div>
       ${blocoPontosCriacao()}
     </section>`;
@@ -642,7 +642,6 @@
         <tbody>${linhasAttr}</tbody>
       </table></div>
       <div class="aviso" id="avisosAttr" ${D.avisos.length ? '' : 'hidden'}>${D.avisos.map(esc).join('<br>')}</div>
-      <p class="sub">Todo atributo começa em −1. Na criação distribua 9 pontos (máximo 2 por atributo); passar de 1 para 2 custa 2 pontos.</p>
     </section>`;
 
     const dnCard = (id, nome, form) => `<div class="dn"><div class="dn-topo"><span class="dn-nome">${nome}</span><span class="dn-valor num" data-d="dn.${id}">${D.dn[id]}</span></div><span class="dn-form">${form}</span></div>`;
@@ -705,7 +704,7 @@
           <span class="esp-sel">${e.attrs.length > 1 ? `<select data-k="esp.${e.id}.attr" data-r aria-label="Atributo de ${e.nome}">${e.attrs.map((a) => opt(a, attrCurto[a], at)).join('')}</select>` : `<span class="tag">${attrCurto[at]}</span>`}</span>
           <span class="esp-t">${sinal(tot)}</span>`;
       }).join('')}</div>
-      <p class="sub">Testes de especialização só são usados fora de batalha. ${D.espUsadas > D.espQtd ? '<span class="tag aviso">Acima do limite do nível</span>' : ''}</p>
+      ${D.espUsadas > D.espQtd ? '<span class="tag aviso">Acima do limite do nível</span>' : ''}
     </section>`;
 
     return `<div class="grade">${identidade}${vit}${atributos}${defesas}${combate}${esp}</div>`;
@@ -721,7 +720,7 @@
           <div class="item-linha"><span class="item-nome">${esc(t.nome)}</span>${campoCustoTalento(`talentos.${i}.pc`, t.pc, def.pc, 'PC')}<button class="btn-ico" data-acao="remTalento" data-i="${i}" aria-label="Remover talento">×</button></div>
           <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
         </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
-      <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
+      <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar Talento</option>${talOpts}</select>
     </div>
     <div class="secao">
       <div class="painel-topo"><h3>Pontos de Criação</h3><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>

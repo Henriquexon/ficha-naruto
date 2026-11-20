@@ -234,6 +234,21 @@ p { margin: 0; }
 /* Campos */
 .campos { display: grid; align-items: start; gap: 10px 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 /* caixas alinhadas pela base mesmo quando um título quebra em duas linhas */
+.modificadores-classe > select,
+.modificadores-classe > .modificador-fixo {
+  box-sizing: border-box;
+  height: 30px;
+  padding: 3px 7px;
+  font-size: .85rem;
+  line-height: 1.2;
+}
+.modificador-fixo {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+}
 .modificadores-classe { display: flex; align-items: center; gap: 8px; }
 .campo > select[data-k="classe"],
 .campo > select[data-k="cla"],

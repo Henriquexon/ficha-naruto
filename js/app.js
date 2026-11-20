@@ -589,7 +589,7 @@
     const inataOpts = R.INATAS.filter((h) => !F.inatas.includes(h.id))
       .map((h) => opt(h.id, `${h.nome}${h.pc != null ? ` (${h.pc} PC)` : ''}`)).join('');
     const clsSel = cls ? cls.bonus.map((g, i) => g.op.length === 1
-      ? `<span class="tag">+${g.v} ${attrCurto[g.op[0]]}</span>`
+      ? `<span class="modificador-fixo">+${g.v} ${attrNome(g.op[0])}</span>`
       : `<select data-k="classeEscolhas.${i}" data-r aria-label="Bônus de classe ${i + 1}">${g.op.map((o) => opt(o, `+${g.v} ${attrNome(o)}`, g.op.includes(F.classeEscolhas[i]) ? F.classeEscolhas[i] : g.op[0])).join('')}</select>`).join('') : '';
 
     const identidade = `
@@ -714,12 +714,7 @@
   function blocoPontosCriacao() {
     const talOpts = R.TALENTOS.filter((t) => !temTalento(t.nome)).map((t) => opt(t.nome, `${t.nome} (${t.pc} PC)`)).join('');
     return `
-    <div class="secao">
-      <div class="painel-topo"><h3>Pontos de Criação</h3><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
-      <div class="stats">
-        ${stat('Clã', D.pc.cla)}${stat('Habilidades inatas', D.pc.inatas)}${stat('Talentos', D.pc.talentos)}
-      </div>
-      ${D.pc.total > 20 ? '<div class="aviso">Os PC gastos passaram de 20.</div>' : ''}
+    <div class="pilha">
       <span class="rotulo">Talentos</span>
       <div class="lista">${F.talentos.map((t, i) => { const def = R.TALENTOS.find((x) => x.nome === t.nome) || {}; return `
         <div class="item"><div class="item-corpo">
@@ -727,6 +722,13 @@
           <p class="sub">${esc(def.desc || '')}${def.pc && /[-/]/.test(def.pc) ? ` <span class="tag">custo ${esc(def.pc)}</span>` : ''}</p>
         </div></div>`; }).join('') || '<div class="vazio">Nenhum talento.</div>'}</div>
       <select id="addTalento" aria-label="Adicionar talento"><option value="">+ Adicionar talento…</option>${talOpts}</select>
+    </div>
+    <div class="secao">
+      <div class="painel-topo"><h3>Pontos de Criação</h3><span class="extra"><b class="num">${D.pc.total}</b> de 20 PC</span></div>
+      <div class="stats">
+        ${stat('Clã', D.pc.cla)}${stat('Habilidades inatas', D.pc.inatas)}${stat('Talentos', D.pc.talentos)}
+      </div>
+      ${D.pc.total > 20 ? '<div class="aviso">Os PC gastos passaram de 20.</div>' : ''}
     </div>`;
   }
 

@@ -343,11 +343,11 @@
     const c = clamp(num(v, f.min), f.min, f.max);
     return clamp(f.min + Math.round((c - f.min) / f.passo) * f.passo, f.min, f.max);
   }
-  const custoTalentoPericia = (t) => {
+  function custoTalentoPericia(t) {
     if (t.origem === 'inicial') return (R.TALENTOS.find((x) => x.nome === t.nome) || {}).pc;
     let c = ''; R.PERICIAS.forEach((p) => p.talentos.forEach(([n, cc]) => { if (n === t.nome) c = cc; }));
     return c;
-  };
+  }
   // Campo de custo: fixo = só o número; faixa = caixa numérica limitada; opções = caixa de seleção
   function campoCustoTalento(k, valor, txt, rot) {
     const f = faixaCusto(txt);

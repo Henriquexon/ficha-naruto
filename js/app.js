@@ -73,24 +73,30 @@
 
   function normalizar(f) {
     const base = fichaVazia();
-    const out = Object.assign(base, f || {});
+    const out = { ...base, ...f, attrs: base.attrs };
     R.ATRIBUTOS.forEach((a) => { out.attrs[a.id] = { pts: num(((f && f.attrs && f.attrs[a.id]) || {}).pts) }; });
-    out.bonus = Object.assign(fichaVazia().bonus, (f && f.bonus) || {});
-    out.dn = Object.assign(fichaVazia().dn, (f && f.dn) || {});
+    out.bonus = Object.assign(base.bonus, (f && f.bonus) || {});
+    out.dn = Object.assign(base.dn, (f && f.dn) || {});
     out.morte = Object.assign({ v: 0, d: 0 }, (f && f.morte) || {});
-    out.bijuu = Object.assign(fichaVazia().bijuu, (f && f.bijuu) || {});
-    out.sharingan = Object.assign(fichaVazia().sharingan, (f && f.sharingan) || {});
-    out.upgrades = Object.assign(fichaVazia().upgrades, (f && f.upgrades) || {});
-    out.treinoCalc = Object.assign(fichaVazia().treinoCalc, (f && f.treinoCalc) || {});
-    if (!Array.isArray(out.portoes) || out.portoes.length !== R.PORTOES.length) out.portoes = fichaVazia().portoes;
+    out.bijuu = Object.assign(base.bijuu, (f && f.bijuu) || {});
+    out.sharingan = Object.assign(base.sharingan, (f && f.sharingan) || {});
+    out.upgrades = Object.assign(base.upgrades, (f && f.upgrades) || {});
+    out.treinoCalc = Object.assign(base.treinoCalc, (f && f.treinoCalc) || {});
+    if (!Array.isArray(out.portoes) || out.portoes.length !== R.PORTOES.length) out.portoes = base.portoes;
     ['inatas', 'elementos', 'jutsus', 'itens', 'companheiros', 'marionetes', 'talentos', 'talentosPericia', 'treinos', 'mascaras', 'classeEscolhas']
       .forEach((k) => { if (!Array.isArray(out[k])) out[k] = []; });
+    const tc = out.treinoCalc;
+    if (!['curto', 'medio', 'longo'].includes(tc.dur)) tc.dur = 'curto';
+    if (!R.RANKS.includes(tc.rank)) tc.rank = '';
+    if (!Number.isInteger(tc.editar) || !out.treinos[tc.editar]) tc.editar = null;
+    if (!Array.isArray(tc.acoes)) tc.acoes = [];
+    tc.acoes = tc.acoes.filter(a => a && typeof a === 'object').map(a => ({ desc: String(a.desc ?? ''), pts: num(a.pts) }));
     if (!Array.isArray(out.pericias)) out.pericias = ['', '', '', ''];
     while (out.pericias.length < 4) out.pericias.push('');
     if (!Array.isArray(out.periciasEsc)) out.periciasEsc = [];
     for (let i = 0; i < 4; i++) if (!out.periciasEsc[i] || typeof out.periciasEsc[i] !== 'object') out.periciasEsc[i] = {};
     // v1: o exemplo somava a perícia de Ninjutsu à mão; agora ela é automática
-    if (num(out.v, 1) < 2 && /\(exemplo\)$/.test(out.nome || '') && out.pericias[0] === 'ninjutsu') {
+    if (num(f?.v, 1) < 2 && /\(exemplo\)$/.test(out.nome || '') && out.pericias[0] === 'ninjutsu') {
       out.bonus.chakra = Math.max(0, num(out.bonus.chakra) - 10);
       out.bonus.regen = Math.max(0, num(out.bonus.regen) - 5);
     }
@@ -326,15 +332,20 @@
   let F = db.fichas[db.atual];
 
   let tSalvar = null;
+  function gravarFicha() {
+    clearTimeout(tSalvar);
+    tSalvar = null;
+    let ok = true;
+    try { localStorage.setItem(STORE, JSON.stringify(db)); } catch (e) { ok = false; }
+    const s = $('#salvoStatus');
+    if (s) s.textContent = ok ? 'Salvo neste navegador · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Não foi possível salvar neste navegador. Exporte a ficha para não perder dados.';
+  }
+
   function salvar() {
     clearTimeout(tSalvar);
-    tSalvar = setTimeout(() => {
-      let ok = true;
-      try { localStorage.setItem(STORE, JSON.stringify(db)); } catch (e) { ok = false; }
-      const s = $('#salvoStatus');
-      if (s) s.textContent = ok ? 'Salvo neste navegador · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Não foi possível salvar neste navegador. Exporte a ficha para não perder dados.';
-    }, 250);
+    tSalvar = setTimeout(gravarFicha, 250);
   }
+  window.addEventListener('pagehide', () => { if (tSalvar !== null) gravarFicha(); });
 
   // ---------------------------------------------------------------- regras derivadas
   function rankDoNivel(n) { return n >= 20 ? 'S' : n >= 15 ? 'A' : n >= 10 ? 'B' : n >= 5 ? 'C' : 'D'; }
@@ -1064,7 +1075,7 @@
 
     const escal = `
     <section class="painel c12">
-      <div class="painel-topo"><h2>Escalonamento de nível</h2><span class="extra">Nível atual destacado</span></div>
+      <div class="painel-topo"><h2>Escalonamento de nível</h2></div>
       <div class="tabela-wrap"><table class="nivel-tab"><tbody>
         ${Object.entries(R.ESCALONAMENTO).map(([lv, t]) => `<tr class="${Number(lv) === F.nivel ? 'atual' : Number(lv) < F.nivel ? 'passado' : ''}"><td>${lv}</td><td>${esc(t) || '—'}</td></tr>`).join('')}
       </tbody></table></div>

@@ -226,7 +226,6 @@ p { margin: 0; }
 .painel-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .painel-topo .extra { color: var(--muted); font-size: .82rem; }
 .sub { color: var(--muted); font-size: .85rem; }
-.sub-titulo { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
 .pilha { display: grid; gap: 10px; }
 .linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .linha > select { width: auto; max-width: 100%; }

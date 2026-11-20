@@ -600,12 +600,9 @@
         <div class="pilha" style="gap:6px">${campo('Nível', numInp('nivel', F.nivel, 'min="1" max="20" data-r'))}${F.nivel >= 20 ? `<select data-k="nivel20Attr" data-r aria-label="Atributo que recebe o +1 extra do nível 20">${opt('', '+1 extra: escolha', F.nivel20Attr)}${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.nivel20Attr)).join('')}</select>` : ''}</div>
         ${campo('Patente', `<select data-k="patente">${R.PATENTES.map((p) => opt(p, p, F.patente)).join('')}</select>`)}
       </div>
-      <div class="campos">
-        ${campo('Clã', `<select data-k="cla" data-r title="${esc(cla.desc)}">${R.CLAS.map((c) => `<option value="${c.id}" title="${esc(c.desc)}"${c.id === F.cla ? ' selected' : ''}>${esc(c.nome)}${c.pc != null ? ` · ${c.pc} PC` : ''}</option>`).join('')}</select>`)}
-        ${cla.escolha ? campo('Atributo do clã', `<select data-k="claEscolha" data-r>${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.claEscolha)).join('')}</select>`) : ''}
-        ${campo('Classe', `<select data-k="classe" data-r>${R.CLASSES.map((c) => opt(c.id, c.nome, F.classe)).join('')}</select>`)}
-      </div>
-      ${cls ? `<div class="linha"><span class="rotulo">Classe</span><span class="sub">${cls.vida} vida/nível · ${cls.chakra} chakra/nível${cla.vidaFixa ? ' (Hoozuki: 6 vida e 6 chakra por nível)' : ''}</span>${clsSel}</div>` : ''}
+      ${campo('Classe', `<select data-k="classe" data-r>${R.CLASSES.map((c) => opt(c.id, c.nome, F.classe)).join('')}</select>`)}
+      ${cls ? `<div class="linha"><strong>Classe</strong><span class="sub">${cls.vida} vida/nível · ${cls.chakra} chakra/nível${cla.vidaFixa ? ' (Hoozuki: 6 vida e 6 chakra por nível)' : ''}</span></div>
+      <div class="modificadores-classe">${clsSel}</div>` : ''}
       <div class="pilha">
         <span class="rotulo">Elementos</span>
         <div class="chips">${R.ELEMENTOS.map((e) => {
@@ -613,6 +610,10 @@
           const on = fixo || F.elementos.includes(e.id);
           return `<button class="chip${fixo ? ' fixo' : ''}" aria-pressed="${on}" ${fixo ? 'disabled title="Vem do clã ou habilidade inata"' : `data-acao="elemento" data-id="${e.id}"`} title="${esc(e.efeito)}">${e.nome}</button>`;
         }).join('')}</div>
+      </div>
+      <div class="campos">
+        ${campo('Clã', `<select data-k="cla" data-r title="${esc(cla.desc)}">${R.CLAS.map((c) => `<option value="${c.id}" title="${esc(c.desc)}"${c.id === F.cla ? ' selected' : ''}>${esc(c.nome)}${c.pc != null ? ` · ${c.pc} PC` : ''}</option>`).join('')}</select>`)}
+        ${cla.escolha ? campo('Atributo do clã', `<select data-k="claEscolha" data-r>${R.ATRIBUTOS.map((a) => opt(a.id, `+1 ${a.nome}`, F.claEscolha)).join('')}</select>`) : ''}
       </div>
       <div class="pilha">
         <span class="rotulo">Habilidades inatas</span>

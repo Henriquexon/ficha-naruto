@@ -1036,7 +1036,7 @@
       <div class="treino-parametros">
         ${antigo ? '' : campo('Duração', `<select data-k="treinoCalc.dur" data-r>${Object.entries(DURACOES_TREINO).map(([k, nome]) => opt(k, nome, tc.dur)).join('')}</select>`)}
         ${antigo ? '' : campo('Rank do treino', `<select data-k="treinoCalc.rank" data-r>${R.RANKS.map((r) => opt(r, r, treino.rank)).join('')}</select>`)}
-        ${antigo ? '' : stat('Pontos de treino', `<output id="saldoTreino" aria-live="polite">${treino.saldo}</output>`, `de ${treino.total} PT`)}
+        ${antigo ? '' : campo('Pontos de Treino', `<output class="pontos-treino" aria-live="polite"><b id="saldoTreino">${treino.saldo}</b> de ${treino.total} PT</output>`)}
       </div>
       <div class="lista">${tc.acoes.map((acao, i) => `<div class="treino-acao">
         ${campo('O que foi feito', inp(`treinoCalc.acoes.${i}.desc`, acao.desc))}
@@ -1055,7 +1055,7 @@
         <ul>${(t.acoes || [t]).map((acao) => `<li>${esc(acao.desc)} · ${num(acao.pts)} PT</li>`).join('')}</ul>
         ${t.acoes ? `<span class="sub">${t.acoes.reduce((n,x) => n + num(x.pts), 0)} de ${num(t.total)} PT gastos</span>` : ''}
       </div></article>`).join('')}</div>
-      <details class="item"><summary><span class="item-linha"><span class="item-nome">Tabela de treino</span><span class="sub">custos</span></span></summary>
+      <details class="item"><summary><span class="item-linha"><span class="item-nome">Tabela de treino</span></span></summary>
         <div class="item-corpo tabela-wrap"><table><thead><tr><th>Atividade</th><th class="c">Pontos</th><th>Benefício</th></tr></thead><tbody>
         ${R.TABELA_TREINO.map(([a, p, b]) => `<tr><td>${esc(a)}</td><td class="c num">${p}</td><td class="sub">${esc(b)}</td></tr>`).join('')}
         </tbody></table><p class="sub">Sensei: 20 pontos na primeira vez, 10 nas seguintes. Com sensei é possível aprender técnicas até 1 rank acima.</p></div>

@@ -525,4 +525,18 @@ details.modulo > .modulo-corpo { padding: 0 16px 16px; display: grid; gap: 12px;
   align-items: end;
   gap: 8px;
 }
+.treino-parametros {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr));
+  gap: 12px 20px;
+}
+.treino-parametros select, .pontos-treino { min-height: 40px; }
+.pontos-treino {
+  display: flex;
+  gap: .3em;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+}
 .treino-acao { grid-template-columns: minmax(0, 1fr) 6em auto; }

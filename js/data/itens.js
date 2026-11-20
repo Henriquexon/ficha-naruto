@@ -110,3 +110,22 @@ window.CATALOGO_COMPONENTES = [
   ['Lança-chamas', 4, '3d10', '1600 Ryo', 'Lança-chamas com DPT adicional de 1d8 (não acumula com Katon). Range Médio.'],
   ['Lançador de Água', 4, '3d12', '1200 Ryo', 'Lança um jato de água que causa empurrão. Range Longo.'],
 ];
+
+// Modelos da seção Criação de Espadas, para reposição.
+window.CATALOGO_ESPADAS = [
+  {"n":"Espada rank C (250 g)","g":"Espadas de reposição","dano":"1d8 ou 1d6","range":"Corpo-a-Corpo ou Médio","custo":"800 Ryo","peso":250,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank C (500 g)","g":"Espadas de reposição","dano":"1d12 ou 1d10","range":"Corpo-a-Corpo ou Médio","custo":"800 Ryo","peso":500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank C (1500 g)","g":"Espadas de reposição","dano":"3d4 ou 1d12","range":"Corpo-a-Corpo ou Médio","custo":"800 Ryo","peso":1500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank C (2500 g)","g":"Espadas de reposição","dano":"2d8 ou 3d4","range":"Corpo-a-Corpo ou Médio","custo":"800 Ryo","peso":2500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank C (3500 g)","g":"Espadas de reposição","dano":"2d6+1d4 ou 1d6+2d4","range":"Corpo-a-Corpo ou Médio","custo":"800 Ryo","peso":3500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank B (250 g)","g":"Espadas de reposição","dano":"1d6+2d4 ou 3d4","range":"Corpo-a-Corpo ou Médio","custo":"1600 Ryo","peso":250,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank B (500 g)","g":"Espadas de reposição","dano":"2d8+1d6 ou 3d6","range":"Corpo-a-Corpo ou Médio","custo":"1600 Ryo","peso":500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank B (1500 g)","g":"Espadas de reposição","dano":"3d6+1d8 ou 2d8+1d6","range":"Corpo-a-Corpo ou Médio","custo":"1600 Ryo","peso":1500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank B (2500 g)","g":"Espadas de reposição","dano":"1d4+3d6+1d8 ou 3d6+1d8","range":"Corpo-a-Corpo ou Médio","custo":"1600 Ryo","peso":2500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank B (3500 g)","g":"Espadas de reposição","dano":"3d6+2d8 ou 2d6+2d8","range":"Corpo-a-Corpo ou Médio","custo":"1600 Ryo","peso":3500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank A (250 g)","g":"Espadas de reposição","dano":"8d4 ou 1d8+2d6+2d4","range":"Corpo-a-Corpo ou Médio","custo":"3200 Ryo","peso":250,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank A (500 g)","g":"Espadas de reposição","dano":"10d4+1d6 ou 10d4","range":"Corpo-a-Corpo ou Médio","custo":"3200 Ryo","peso":500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank A (1500 g)","g":"Espadas de reposição","dano":"7d8+1d4 ou 5d8+1d12","range":"Corpo-a-Corpo ou Médio","custo":"3200 Ryo","peso":1500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank A (2500 g)","g":"Espadas de reposição","dano":"16d4  ou 12d4+1d6","range":"Corpo-a-Corpo ou Médio","custo":"3200 Ryo","peso":2500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."},
+  {"n":"Espada rank A (3500 g)","g":"Espadas de reposição","dano":"16d4+1d6 ou 15d4","range":"Corpo-a-Corpo ou Médio","custo":"3200 Ryo","peso":3500,"obs":"Reposição de espada criada pelo ninja, durante descanso longo ou treino."}
+];

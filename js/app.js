@@ -767,7 +767,7 @@
   }
 
   // ---------------------------------------------------------------- ABA: Jutsus
-  const ui = { jq: '', jrank: '', jorig: '', jel: '', cat: { q: '', cat: '', rank: '', meu: false, orig: '', el: '', lim: 40 }, loja: { q: '', g: '' }, criat: { g: '' } };
+  const ui = { jq: '', jrank: '', jorig: '', jel: '', cat: { q: '', cat: '', rank: '', meu: false, orig: '', el: '', lim: 40 }, loja: { q: '', g: '', compra: false }, criat: { g: '' } };
 
   function gruposMeus() {
     const g = [].concat(D.cla.grupos || []);
@@ -910,6 +910,7 @@
         <div class="painel-topo"><h2>Equipamento</h2><span class="extra">${F.itens.length} item(ns)</span></div>
         <div class="barra-ferr">
           <button class="btn primario" data-acao="abrirLoja">Adicionar da loja</button>
+          <button class="btn" data-acao="abrirCompras">Comprar item</button>
           <button class="btn" data-acao="novoItem">Item personalizado</button>
         </div>
         <div class="lista">${linhas || '<div class="vazio">Nenhum item.</div>'}</div>
@@ -921,28 +922,41 @@
           ${stat('Peso carregado', `<span data-d="peso" data-fmt="g">${fmtKg(D.peso / 1000)}</span>`, `Limite <span data-d="carga" data-fmt="kg">${fmtKg(D.carga)}</span>`)}
         </div>
         ${acima ? '<div class="aviso">Peso acima do limite de carregamento.</div>' : ''}
-        <p class="sub">O ninja carrega 2,5 kg + Constituição (mínimo 0). Roupas básicas não contam. Arma de uma mão: até metade do carregamento máximo (${fmtKg(D.carga / 2)}).</p>
-        <p class="sub">Embainhar ou guardar arma: 1 PA. Pegar arma no chão: 2 PA. Ao coletar itens usados em combate, recupera metade (mín. 1).</p>
       </section>
     </div>`;
   }
 
-  function modalLoja() {
-    const gs = [...new Set(CAT_I.map((i) => i.g))];
-    abrirModal('Loja: Armas & Mercadorias', `
+  const itensCompra = [
+    ...CAT_I,
+    ...CAT_M.map((m) => ({ ...m, g: 'Marionetes', obs: `Vida: ${m.pv} · Ataque: ${m.atk} · Deslocamento: ${m.desl} m · Compartimentos: ${m.comp}` })),
+    ...CAT_COMP.map(([n, slots, dano, custo, obs]) => ({ n, g: 'Componentes', dano, custo, obs: `${slots} compartimento(s). ${obs || ''}` })),
+    ...(window.CATALOGO_ESPADAS || []),
+  ].flatMap((it) => {
+    const custo = /^(\d+)\s*Ryo(?:\/metro)?$/i.exec(it.custo || '');
+    return custo ? [{ ...it, preco: Number(custo[1]) }] : [];
+  });
+
+  function modalLoja(compra = false) {
+    if (ui.loja.compra !== compra) { ui.loja.g = ''; ui.loja.q = ''; }
+    ui.loja.compra = compra;
+    const gs = [...new Set((compra ? itensCompra : CAT_I).map((i) => i.g))];
+    abrirModal(compra ? 'Comprar item' : 'Loja: Armas & Mercadorias', `
       <div class="barra-ferr">
         <input type="search" id="lojaQ" placeholder="Buscar item" value="${esc(ui.loja.q)}" aria-label="Buscar item">
         <select id="lojaG" aria-label="Seção" style="flex:0 1 200px">${opt('', 'Todas as seções', ui.loja.g)}${gs.map((g) => opt(g, g, ui.loja.g)).join('')}</select>
       </div>
+      ${compra ? '<p id="saldoCompra" role="status"></p>' : ''}
       <div class="lista" id="lojaLista"></div>`);
     renderLoja();
   }
   function renderLoja() {
     const q = ui.loja.q.toLowerCase();
     const el = $('#lojaLista'); if (!el) return;
-    el.innerHTML = CAT_I.map((it, idx) => [it, idx]).filter(([it]) => (!ui.loja.g || it.g === ui.loja.g) && (!q || (it.n + ' ' + (it.obs || '')).toLowerCase().includes(q)))
+    const compra = ui.loja.compra;
+    if (compra) $('#saldoCompra').textContent = `Saldo: ${num(F.ryo)} Ryõ`;
+    el.innerHTML = (compra ? itensCompra : CAT_I).map((it, idx) => [it, idx]).filter(([it]) => (!ui.loja.g || it.g === ui.loja.g) && (!q || (it.n + ' ' + (it.obs || '')).toLowerCase().includes(q)))
       .map(([it, idx]) => `<details class="item"><summary>
-        <span class="item-linha"><span class="item-nome">${esc(it.n)}</span><button class="btn peq primario" data-acao="addItem" data-idx="${idx}">Adicionar</button></span>
+        <span class="item-linha"><span class="item-nome">${esc(it.n)}</span><button class="btn peq primario" data-acao="addItem" data-idx="${idx}" ${compra && num(F.ryo) < it.preco ? 'disabled' : ''}>${compra ? (num(F.ryo) < it.preco ? 'Saldo insuficiente' : 'Comprar') : 'Adicionar'}</button></span>
         <span class="item-meta"><span>${esc(it.g)}</span>${it.dano ? `<span>Dano <b>${esc(it.dano)}</b></span>` : ''}${it.range ? `<span>Range <b>${esc(it.range)}</b></span>` : ''}<span>Custo <b>${esc(it.custo) || '—'}</b></span><span>Peso <b>${it.peso == null ? '—' : it.peso + ' g'}</b></span></span>
       </summary>${it.obs ? `<div class="item-corpo"><p class="efeito">${esc(it.obs)}</p></div>` : ''}</details>`).join('');
   }
@@ -1392,11 +1406,15 @@
     remReq(el) { F.jutsus[+el.dataset.i].reqs.splice(+el.dataset.ri, 1); return true; },
     remJutsu(el) { F.jutsus.splice(+el.dataset.i, 1); return true; },
     abrirLoja() { modalLoja(); },
+    abrirCompras() { modalLoja(true); },
     addItem(el) {
-      const it = CAT_I[+el.dataset.idx];
+      const compra = ui.loja.compra;
+      const it = (compra ? itensCompra : CAT_I)[+el.dataset.idx];
+      if (!it || (compra && num(F.ryo) < it.preco)) return;
       const ex = F.itens.find((x) => x.n === it.n);
       if (ex) ex.qtd = num(ex.qtd) + 1; else F.itens.push(itemDoCatalogo(it));
-      salvar(); toast(`${esc(it.n)} adicionado.`); if (aba === 'inventario') render();
+      if (compra) { F.ryo = num(F.ryo) - it.preco; renderLoja(); }
+      salvar(); toast(compra ? `${esc(it.n)} comprado por ${it.preco} Ryõ.` : `${esc(it.n)} adicionado.`); if (aba === 'inventario') render();
     },
     novoItem() { F.itens.push({ v: 2, id: uid(), n: 'Novo item', g: '', qtd: 1, peso: 0, danoTipo: '-', danoQtd: '', danoFaces: '', range: '-', custo: '', notas: '' }); return true; },
     remItem(el) { F.itens.splice(+el.dataset.i, 1); return true; },
